@@ -76,6 +76,7 @@ services:
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_N8N_AGENT_WEBHOOK_URL: ${NEXT_PUBLIC_N8N_AGENT_WEBHOOK_URL:-}
     container_name: iconnect-dashboard
     restart: always
     ports:
@@ -96,7 +97,7 @@ services:
 
   # ── 4. n8n Automation Engine ──
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:${N8N_VERSION:-latest}
     container_name: iconnect-n8n
     restart: always
     ports:
@@ -107,6 +108,11 @@ services:
       - N8N_PROTOCOL=${N8N_PROTOCOL:-https}
       - NODE_ENV=production
       - WEBHOOK_URL=${WEBHOOK_URL:-https://n8n.asra3.com/}
+      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL:-https://n8n.asra3.com/}
+      # Behind the aaPanel/nginx reverse proxy — trust 1 proxy hop (fixes IP + rate-limit + cookie)
+      - N8N_PROXY_HOPS=1
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Riyadh}
+      - N8N_RUNNERS_ENABLED=true
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
