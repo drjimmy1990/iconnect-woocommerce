@@ -1,10 +1,11 @@
 networks:
+  # Shared EXTERNAL network so your separately-deployed n8n compose can reach these
+  # backends by service name (http://woocommerce-wrapper:8081, http://semantic-search:8080).
+  # Create it ONCE before `up`:   docker network create iconnect-network
+  # Then add the same network (external) to your n8n compose's n8n service.
   iconnect-network:
-    driver: bridge
-
-volumes:
-  n8n_data:
-    driver: local
+    name: iconnect-network
+    external: true
 
 services:
   # ── 1. Semantic Search Microservice (Backend A) ──
@@ -95,25 +96,5 @@ services:
       retries: 3
       start_period: 15s
 
-  # ── 4. n8n Automation Engine ──
-  n8n:
-    image: n8nio/n8n:${N8N_VERSION:-latest}
-    container_name: iconnect-n8n
-    restart: always
-    ports:
-      - "127.0.0.1:5678:5678"
-    environment:
-      - N8N_HOST=${N8N_HOST:-n8n.asra3.com}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL:-https}
-      - NODE_ENV=production
-      - WEBHOOK_URL=${WEBHOOK_URL:-https://n8n.asra3.com/}
-      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL:-https://n8n.asra3.com/}
-      # Behind the aaPanel/nginx reverse proxy — trust 1 proxy hop (fixes IP + rate-limit + cookie)
-      - N8N_PROXY_HOPS=1
-      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Riyadh}
-      - N8N_RUNNERS_ENABLED=true
-    volumes:
-      - n8n_data:/home/node/.n8n
-    networks:
-      - iconnect-network
+# n8n is deployed SEPARATELY (your own compose). Attach its service to the shared
+# external `iconnect-network` above so it can call the backends by service name.

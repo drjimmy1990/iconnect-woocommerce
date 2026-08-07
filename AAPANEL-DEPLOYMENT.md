@@ -9,8 +9,10 @@ Let's Encrypt SSL (auto-renew). The owner's existing **PostgreSQL 16 (Odoo data)
 > (`curl -s ifconfig.me`). Suggested subdomains: `n8n.<DOMAIN>`, `dash.<DOMAIN>`.
 
 > **⚡ Deployment method = Docker Compose** (see [DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)).
-> aaPanel's role is now **SSL reverse proxy only** — it fronts the containers on
-> `127.0.0.1:5678` (n8n) and `127.0.0.1:3000` (dashboard) and issues Let's Encrypt.
+> The app compose builds **backends A/B + dashboard**; **n8n is deployed separately**
+> (its own compose, sharing the external `iconnect-network`). aaPanel's role is now
+> **SSL reverse proxy only** — it fronts `127.0.0.1:3000` (dashboard) and
+> `127.0.0.1:5678` (your n8n) and issues Let's Encrypt.
 > **Use:** Step 0 (backup), Step 1 (aaPanel+Nginx), Step 2 (DNS), Step 9 (reverse proxy + SSL),
 > Step 10 (firewall). **Skip** Steps 3–8 (Node/pm2/npm) — those are the non-Docker fallback;
 > `docker compose up -d --build` replaces them.
