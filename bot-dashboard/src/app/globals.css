@@ -1,0 +1,14 @@
+/* src/app/globals.css */
+body {
+  margin: 0;
+}
+
+/* 
+  A subtle, classic chat background pattern.
+  This is a base64 encoded SVG of a light pattern. It's more efficient
+  than linking an external image file for something so small.
+*/
+.chat-background {
+    background-color: #E5DDD5; /* A light, warm grey like WhatsApp's old background */
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDA4IiBoZWlnaHQ9IjQwOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNMCAxMGg0ME0xMCAwdiQwTTYwIDEwdi00ME0xMCA0MHY0ME0wIDMwdi00ME0zMCAwdi00ME00MCAzMHYtNDBNMzAgNjB2LTQwIiBmaWxsPSJub25lIiBzdHJva2U9IiM3OTg4OTciIHN0cm9rZS1vcGFjaXR5PSIuMDUiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0yMCAyNWwyLjUgMi41TDI1IDI1bDIuNS0yLjVMMzAgMjVsMi41IDIuNUwzNSAyNWwyLjUtMi41TDQwIDI1bTIuNSAyLjVMMTUgMjUgMTIuNSAyMi41IDEwIDI1bC0yLjUgMi41TDUgMjVsLTIuNSAyLjVMMCAyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzk4ODk3IiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1ib3VjZT0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuMDUiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=');
+}

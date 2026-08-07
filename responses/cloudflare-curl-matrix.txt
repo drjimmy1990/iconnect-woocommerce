@@ -1,0 +1,182 @@
+Cloudflare curl matrix — compact raw summary
+Started UTC: 2026-08-02T22:41:38.141424+00:00
+Finished UTC: 2026-08-02T22:42:38.750897+00:00
+Target: WooCommerce product categories, per_page=1
+Variants: 29; attempts: 87 (3 per variant)
+Credentials are redacted. Query-string authentication exposes keys to URL logs and was tested only because explicitly requested.
+No redirects followed. Only GET, HEAD, and OPTIONS were used.
+WORKING criterion: at least 2/3 attempts are HTTP 2xx parseable JSON arrays from GET category endpoints.
+
+[A1] canonical permalink; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509756ce6b658b-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5769 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509759ad4e5d43-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5790 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250975c79ebc0fb-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5790 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[B1] root rest_route fallback; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250975f1f463072-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5844 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097619db2376c-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5844 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509765bcc8762f-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5844 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[B2] index.php rest_route fallback; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097691e629822-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5871 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250976c2c4e26d8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5892 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250976edf88e1f1-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5871 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[C1] canonical permalink; query-string auth
+method=GET auth=query profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097719a4a078b-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6128 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097742e1c1ed5-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6128 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097774e14e195-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6128 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+
+[C2] root rest_route fallback; query-string auth
+method=GET auth=query profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250977a0e2be274-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6204 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250977d0a5ffb98-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6204 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250977fdfe76cb1-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6204 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+
+[C3] index.php rest_route fallback; query-string auth
+method=GET auth=query profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509782aca9e214-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6231 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097855960e189-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6231 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509787de8be1fd-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6231 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&consumer_key=%3Credacted%3E&consumer_secret=%3Credacted%3E
+
+[D1.1] canonical; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250978a9c8d37a8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5769 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250978d594f531c-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5769 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097901ffba9cc-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5769 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[D1.2] canonical; Basic auth; browser UA only
+method=GET auth=basic profile=browser working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509792eaed53a8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6021 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097954c98e19e-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6021 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097974dfbe23f-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6021 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[D1.3] canonical; Basic auth; full browser-ish headers
+method=GET auth=basic profile=full working=YES json_successes=2/3
+attempt=1 curl_exit=0 http=200 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097996def0ba3-MRS location=- body=JSON-array body_start=[ json_detail=items=1 bytes=3225 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=200 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097a8b9c88ada-MRS location=- body=JSON-array body_start=[ json_detail=items=1 bytes=3225 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097b9ef1c2e37-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6191 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[D1.4] canonical; Basic auth; minimal API: UA "n8n" + Accept application/json
+method=GET auth=basic profile=minimal working=NO json_successes=1/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097bcad4ce219-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5744 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097bf3d0bb6c4-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5744 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=200 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097c1e8984348-MRS location=- body=JSON-array body_start=[ json_detail=items=1 bytes=3225 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[D2.1] rest; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097d188dfe159-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5844 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097d44cf8e243-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5844 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097d6c957aead-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5823 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D2.2] rest; Basic auth; browser UA only
+method=GET auth=basic profile=browser working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097d96e6f277f-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097e7bfdee1a6-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6075 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25097ea3e55d746-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6075 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D2.3] rest; Basic auth; full browser-ish headers
+method=GET auth=basic profile=full working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097ecdf7ae177-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25097fb2d2dc611-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25098073b9ec84f-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D2.4] rest; Basic auth; minimal API: UA "n8n" + Accept application/json
+method=GET auth=basic profile=minimal working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250981368728749-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5798 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098163f9d9d99-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5798 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a25098191fee61ee-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D3.1] rest-index; Basic auth; default curl UA
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098265cc6e1dd-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5871 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509828f96fe240-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5892 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250982b4e8bfc1f-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5892 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D3.2] rest-index; Basic auth; browser UA only
+method=GET auth=basic profile=browser working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a250982dec5873ab-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250983b78f64c05-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6123 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250983e48cffb6d-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=6123 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D3.3] rest-index; Basic auth; full browser-ish headers
+method=GET auth=basic profile=full working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a2509840c873078b-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a250984edf389d86-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=401 content-type=application/json; charset=UTF-8 server=cloudflare cf-mitigated=- cf-ray=a250985dfc67fb6d-MRS location=- body=JSON-object body_start={ json_detail=error_code=woocommerce_rest_cannot_view bytes=248 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[D3.4] rest-index; Basic auth; minimal API: UA "n8n" + Accept application/json
+method=GET auth=basic profile=minimal working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250986a1920e28d-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5846 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250986cba0eb24a-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5846 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250986f4d05aead-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5846 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1
+
+[E1] canonical; Basic auth; unique cache-buster each attempt
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098721a2ae191-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5874 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&_=1785710498322
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098749d4f89c7-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5853 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&_=1785710498323
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098773962e229-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5853 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1&_=1785710498324
+
+[E2] root rest_route; Basic auth; unique cache-buster each attempt
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250987a0fa98749-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5907 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498332
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250987d7b90ae33-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5928 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498333
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250987fcea3ad93-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5907 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498334
+
+[E3] index.php rest_route; Basic auth; unique cache-buster each attempt
+method=GET auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098820c86cac8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5977 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498342
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509885df24e1e8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5956 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498343
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250988868932503-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5956 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fv3%2Fproducts%2Fcategories&per_page=1&_=1785710498344
+
+[F1] canonical HEAD; Basic auth
+method=HEAD auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250988b084a70e7-MRS location=- body=no-body-HEAD body_start=- json_detail=- bytes=2180 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250988c7b966488-MRS location=- body=no-body-HEAD body_start=- json_detail=- bytes=2179 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250988e1ad01ed5-MRS location=- body=no-body-HEAD body_start=- json_detail=- bytes=2180 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[F2] canonical OPTIONS; Basic auth
+method=OPTIONS auth=basic profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250988f9f42b416-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5790 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509891dcb9e167-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5790 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098948aa39a42-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5790 url=https://iconnect-intl.com/store/wp-json/wc/v3/products/categories?per_page=1
+
+[G1] public Store API v1 canonical
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098973ee8acfb-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5616 url=https://iconnect-intl.com/store/wp-json/wc/store/v1/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a2509899e8b8f31b-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5616 url=https://iconnect-intl.com/store/wp-json/wc/store/v1/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250989cef67f4f6-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5616 url=https://iconnect-intl.com/store/wp-json/wc/store/v1/products/categories?per_page=1
+
+[G2] public Store API unversioned canonical
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a250989f8cacb416-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5607 url=https://iconnect-intl.com/store/wp-json/wc/store/products/categories?per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098a22b384b31-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5607 url=https://iconnect-intl.com/store/wp-json/wc/store/products/categories?per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098a4adb09d86-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5607 url=https://iconnect-intl.com/store/wp-json/wc/store/products/categories?per_page=1
+
+[G3] public Store API v1 root rest_route
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098a75d584e0f-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5697 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098a9f965e187-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5697 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098ac982be28e-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5697 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+
+[G4] public Store API unversioned root rest_route
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098af4b0caa1e-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5661 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098b53915e1fd-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5661 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098bb384753a8-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5661 url=https://iconnect-intl.com/store/?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1
+
+[G5] public Store API v1 index.php rest_route
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098c17e264a32-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5724 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098c3b9d0e1f9-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5724 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098c66aa997eb-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5724 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fv1%2Fproducts%2Fcategories&per_page=1
+
+[G6] public Store API unversioned index.php rest_route
+method=GET auth=none profile=default working=NO json_successes=0/3
+attempt=1 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098c90a08a65d-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5709 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1
+attempt=2 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098cb990c6488-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5709 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1
+attempt=3 curl_exit=0 http=403 content-type=text/html; charset=UTF-8 server=cloudflare cf-mitigated=challenge cf-ray=a25098ce7b0ee221-MRS location=- body=challenge-HTML body_start=< json_detail=- bytes=5709 url=https://iconnect-intl.com/store/index.php?rest_route=%2Fwc%2Fstore%2Fproducts%2Fcategories&per_page=1

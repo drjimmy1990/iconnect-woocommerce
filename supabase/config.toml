@@ -1,0 +1,14 @@
+# Supabase project config for the Edge Functions.
+# Deploy with: supabase functions deploy semantic-search --no-verify-jwt
+# (or `supabase functions deploy --project-ref <ref>`)
+
+[functions.semantic-search]
+verify_jwt = false   # called by your n8n/chatbot backend, not by Supabase-auth users
+
+[functions.wc-sync-webhook]
+verify_jwt = false   # called by WooCommerce's webhook delivery (no JWT)
+
+[functions.wc-delta-sync]
+verify_jwt = false   # called by a scheduler or manually
+# To schedule every 5 minutes, uncomment the next line (Supabase scheduled functions):
+# schedule = "*/5 * * * *"

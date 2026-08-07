@@ -1,0 +1,28 @@
+HTTP/1.1 200 OK
+Date: Sun, 02 Aug 2026 17:01:30 GMT
+Content-Type: application/json; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+expires: Wed, 11 Jan 1984 05:00:00 GMT
+x-robots-tag: noindex
+link: <https://iconnect-intl.com/store/wp-json/>; rel="https://api.w.org/"
+x-content-type-options: nosniff
+access-control-expose-headers: X-WP-Total, X-WP-TotalPages, Link, Cart-Token
+access-control-allow-headers: Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, Cart-Token, Nonce, X-OptinMonster-ApiKey
+nonce: 226d32d4be
+nonce-timestamp: 1785690090
+user-id: 0
+cart-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidF85YjdlZWZhOTcwYTRlNDYzZDA3MzJkNzExYjY2NWQiLCJleHAiOjE3ODU4NjI4OTAsImlzcyI6InN0b3JlLWFwaSIsImlhdCI6MTc4NTY5MDA5MH0.BydQv4pqfEZUsguZouTvVWgie5cZeunlV7h5L0qcygI
+cart-hash: 
+Cache-Control: no-store
+allow: GET
+access-control-allow-methods: OPTIONS, GET, POST, PUT, PATCH, DELETE
+access-control-allow-credentials: true
+vary: Origin,Accept-Encoding
+host-header: c2hhcmVkLmJsdWVob3N0LmNvbQ==
+set-cookie: __cf_bm=S4wSPn05R_RmbktnU2AkZ_..1URdc9cqSuuSMeOUv0U-1785690088.8673878-1.0.1.1-wTfSV6ukJazuc0kLbRla3KT0xGbNbGwGAc50zGANrdyFTbIUpHwZz5DKAIG7.N230Mhc1Pc2Un8G32Ibs4JgRd8PrBArWc7vSEfwZ0wVHpraXAdj9wPni8C6rrJ8GcF0; HttpOnly; SameSite=None; Secure; Path=/; Domain=iconnect-intl.com; Expires=Sun, 02 Aug 2026 17:31:30 GMT
+Server: cloudflare
+cf-cache-status: BYPASS
+CF-RAY: a24ea50f68524f8a-MRS
+alt-svc: h3=":443"; ma=86400
+
