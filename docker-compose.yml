@@ -1,0 +1,113 @@
+networks:
+  iconnect-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+    driver: local
+
+services:
+  # ── 1. Semantic Search Microservice (Backend A) ──
+  semantic-search:
+    build:
+      context: ./semantic-search-backend
+      dockerfile: Dockerfile
+    container_name: iconnect-semantic-search
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - PORT=8080
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-large}
+      - EMBEDDING_DIMS=${EMBEDDING_DIMS:-512}
+      - FTS_CONFIG=${FTS_CONFIG:-arabic}
+      - DOCUMENTS_TABLE=${DOCUMENTS_TABLE:-documents}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    networks:
+      - iconnect-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── 2. WooCommerce REST API Wrapper (Backend B) ──
+  woocommerce-wrapper:
+    build:
+      context: ./woocommerce-api-wrapper
+      dockerfile: Dockerfile
+    container_name: iconnect-wc-wrapper
+    restart: always
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      - PORT=8081
+      - WC_URL=${WC_URL}
+      - WC_KEY=${WC_KEY}
+      - WC_SECRET=${WC_SECRET}
+      - USER_AGENT=${USER_AGENT}
+      - WC_COOKIE=${WC_COOKIE}
+      - SEMANTIC_BACKEND_URL=http://semantic-search:8080
+      - WC_WEBHOOK_SECRET=${WC_WEBHOOK_SECRET}
+      - SYNC_ENABLED=${SYNC_ENABLED:-true}
+      - SYNC_INTERVAL_MIN=${SYNC_INTERVAL_MIN:-5}
+    depends_on:
+      semantic-search:
+        condition: service_healthy
+    networks:
+      - iconnect-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── 3. Next.js CRM & Bot Dashboard (Frontend) ──
+  bot-dashboard:
+    build:
+      context: ./bot-dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: iconnect-dashboard
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    networks:
+      - iconnect-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── 4. n8n Automation Engine ──
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: iconnect-n8n
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-n8n.asra3.com}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-https}
+      - NODE_ENV=production
+      - WEBHOOK_URL=${WEBHOOK_URL:-https://n8n.asra3.com/}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - iconnect-network
