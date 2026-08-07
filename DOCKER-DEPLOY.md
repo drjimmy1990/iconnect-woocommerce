@@ -7,7 +7,7 @@ PostgreSQL 16 (Odoo) on `127.0.0.1:5432` is **never touched** — no container c
 ## Build vs pull — read this first
 - **Built from your source** (need the folders on the VPS): `semantic-search`, `woocommerce-wrapper`, `bot-dashboard`.
 - **Pulled image**: `n8n` only.
-- ➜ So you can't just paste the YAML. Upload the **whole project folder**, then `up -d --build` (builds the 3, pulls n8n, starts all 4).
+- ➜ So you can't just paste the YAML. Clone the **whole repo** (source + Dockerfiles), then `up -d --build` (builds the 3, pulls n8n, starts all 4).
 
 ---
 
@@ -17,13 +17,19 @@ Installs Docker Engine + Compose v2 with a GUI. Verify in a terminal:
 docker --version && docker compose version
 ```
 
-## Step 2 — Put the WHOLE project on the VPS
-Not just the compose file — the three source folders + Dockerfiles too. From your machine:
+## Step 2 — Clone the repo onto the VPS (git)
+Clone the whole project into `/opt/iconnect` (compose file + the 3 build contexts + Dockerfiles all live in it). On the VPS:
 ```bash
-scp -r "C:/Users/LOQ/Desktop/CLI/emirates mostafa/woocommerce" root@<VPS_IP>:/opt/iconnect
+git clone https://github.com/drjimmy1990/iconnect-woocommerce.git /opt/iconnect
+cd /opt/iconnect
 ```
+> **Private repo?** Authenticate with a GitHub Personal Access Token:
+> `git clone https://<GITHUB_TOKEN>@github.com/drjimmy1990/iconnect-woocommerce.git /opt/iconnect`
+> (or add an SSH deploy key). If the repo is public, the plain command works as-is.
+
 Result on the box: `/opt/iconnect/docker-compose.yml`, `/opt/iconnect/semantic-search-backend/`, `.../woocommerce-api-wrapper/`, `.../bot-dashboard/`.
-> `.dockerignore` files (added) keep your Windows `node_modules`/`.next` out of the build — important, they'd otherwise break the Linux images.
+> `.dockerignore` files keep `node_modules`/`.next` out of the build — important, a host-built `node_modules` would break the Linux images.
+> Checkout is **LF** on Linux (the repo stores LF), so the Dockerfiles/scripts run fine even though your Windows working copy shows CRLF warnings.
 
 ## Step 3 — Create the real `.env` (one file powers everything)
 ```bash
@@ -37,6 +43,7 @@ Fill especially:
 - `NEXT_PUBLIC_N8N_AGENT_WEBHOOK_URL` → `https://n8n.<DOMAIN>/webhook/wa-agent-send` (or leave blank and set it per-channel in the dashboard UI)
 
 `.env` sits next to `docker-compose.yml`, so compose loads it automatically — including the `NEXT_PUBLIC_*` **build args** the dashboard needs at build time.
+> `.env` is **gitignored** — you create it once on the server; future `git pull`s never touch it. (Same for the `n8n_data` volume — updates don't wipe your data.)
 
 ## Step 4 — Build + pull + start (the "and so on")
 ```bash
@@ -88,17 +95,25 @@ When you migrate workflow `qz1II8EwuKTJiQDy` into this n8n, set the 5 backend to
 - Backend A → `http://semantic-search:8080`
 - Backend B → `http://woocommerce-wrapper:8081`
 
-## Day-2 operations
+## Day-2 operations — update from git
+Pull the latest code and rebuild in place (never touches `.env` or the `n8n_data` volume):
 ```bash
 cd /opt/iconnect
-docker compose pull && docker compose up -d          # update n8n image
-docker compose up -d --build backend? bot-dashboard  # rebuild an app after code change
+git pull                                   # fetch latest code
+docker compose up -d --build              # rebuild changed apps + restart all
+```
+Other handy commands:
+```bash
+docker compose pull && docker compose up -d          # update just the n8n image
+docker compose up -d --build bot-dashboard           # rebuild a single app after a code change
 docker compose restart <service>
 docker compose logs -f --tail=100 <service>
-docker compose down                                  # stop all (volumes/data kept)
+docker compose down                                  # stop all (named volumes/data kept)
 ```
-**Back up** the `n8n_data` volume (holds n8n's encryption key + workflows):
+> If `git pull` ever complains about local changes, you edited a tracked file on the server — the only file you should edit is `.env`, which is gitignored. Keep server-side edits out of tracked files.
+
+**Back up** the `n8n_data` volume (holds n8n's encryption key + workflows). With the repo cloned at `/opt/iconnect`, compose names the volume `iconnect_n8n_data`:
 ```bash
-docker run --rm -v woocommerce_n8n_data:/data -v /root:/backup alpine tar czf /backup/n8n_data_$(date +%F).tgz -C /data .
+docker run --rm -v iconnect_n8n_data:/data -v /root:/backup alpine tar czf /backup/n8n_data_$(date +%F).tgz -C /data .
 ```
-*(Volume name is `<projectdir>_n8n_data`; confirm with `docker volume ls`.)*
+*(Confirm the exact name with `docker volume ls` — it's `<project-dir>_n8n_data`.)*
