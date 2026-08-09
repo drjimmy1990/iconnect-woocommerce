@@ -1,150 +1,90 @@
-# aaPanel Deployment — all services on the Contabo box (co-located)
+# aaPanel — sites, reverse proxy & SSL
 
-Deploy **n8n + dashboard + Backend A + Backend B** onto the single Contabo VPS
-(`vmi2117789`, Ubuntu 20.04, 6 vCPU / 15 GB RAM), with **aaPanel** managing Nginx +
-Let's Encrypt SSL (auto-renew). The owner's existing **PostgreSQL 16 (Odoo data)** on
-`127.0.0.1:5432` is **left completely untouched** — nothing here connects to it.
+aaPanel's **only** role in this project is the public HTTPS front door. Everything runs in
+Docker on `127.0.0.1` ([DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)); aaPanel terminates TLS and
+proxies inward. Host facts and the Odoo co-tenant: [SERVER-NOTES.md](SERVER-NOTES.md).
 
-> Replace `<DOMAIN>` with the owner's domain and `<VPS_IP>` with the box's public IP
-> (`curl -s ifconfig.me`). Suggested subdomains: `n8n.<DOMAIN>`, `dash.<DOMAIN>`.
+| Subdomain | → | WebSocket? |
+|---|---|---|
+| `dash.iconnect-intl.com` | `http://127.0.0.1:3000` (dashboard) | no |
+| `n8n.iconnect-intl.com` | `http://127.0.0.1:5678` (n8n) | **yes** |
 
-> **⚡ Deployment method = Docker Compose** (see [DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)).
-> The app compose builds **backends A/B + dashboard**; **n8n is deployed separately**
-> (its own compose, sharing the external `iconnect-network`). aaPanel's role is now
-> **SSL reverse proxy only** — it fronts `127.0.0.1:3000` (dashboard) and
-> `127.0.0.1:5678` (your n8n) and issues Let's Encrypt.
-> **Use:** Step 0 (backup), Step 1 (aaPanel+Nginx), Step 2 (DNS), Step 9 (reverse proxy + SSL),
-> Step 10 (firewall). **Skip** Steps 3–8 (Node/pm2/npm) — those are the non-Docker fallback;
-> `docker compose up -d --build` replaces them.
-
-## Final architecture
-| Service | Port | Exposure | URL |
-|---|---|---|---|
-| n8n (runs the WhatsApp workflow) | 5678 | **public** (SSL) | `https://n8n.<DOMAIN>` |
-| bot-dashboard (Next.js) | 3000 | **public** (SSL) | `https://dash.<DOMAIN>` |
-| Backend A — semantic search | 8080 | **internal only** | `http://127.0.0.1:8080` |
-| Backend B — WooCommerce wrapper | 8081 | **internal only** | `http://127.0.0.1:8081` |
-| PostgreSQL 16 (owner's Odoo DB) | 5432 | localhost only — **DO NOT TOUCH** | — |
+Backends A (`:8080`) and B (`:8081`) get **no site** — they're internal only, reached by n8n
+over the `iconnect-network` Docker network.
 
 ---
 
-## Step 0 — Backup done first (prerequisite)
-- Contabo snapshot (if panel access), **and/or**
-- `sudo -u postgres pg_dumpall | gzip > /root/odoo_pg_backup_$(date +%F).sql.gz`
-
-## Step 1 — aaPanel + Nginx (prerequisite)
-- aaPanel installed; on first login **close** the LNMP one-click popup.
-- **Software Store → install Nginx only.** Do **NOT** install MySQL/MariaDB or PHP (not needed — everything uses Supabase cloud + the existing Postgres).
-- Save the panel URL / user / password / security-path.
-
-## Step 2 — DNS
-Create two A-records at the domain's DNS:
-```
-n8n.<DOMAIN>    A    <VPS_IP>
-dash.<DOMAIN>   A    <VPS_IP>
-```
-Wait for them to resolve (`ping n8n.<DOMAIN>` shows `<VPS_IP>`) before issuing SSL.
-
-## Step 3 — Node 20 LTS + PM2
-Easiest via aaPanel: **App Store → "PM2 Manager"** (installs a Node version + pm2 with a GUI).
-Or via CLI:
+## 0. Installing aaPanel (only if starting fresh)
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs && sudo npm i -g pm2 && node -v
+URL=https://www.aapanel.com/script/install_7.0_en.sh && if [ -f /usr/bin/curl ];then curl -ksSO "$URL";else wget --no-check-certificate -O install_7.0_en.sh "$URL";fi;bash install_7.0_en.sh aapanel
 ```
+- Save the panel URL / user / password / security path printed at the end (shown once).
+- **Close** the one-click LNMP popup on first login → Software Store → install **Nginx** only.
+- Install **Docker** from the App Store.
+- You do **not** need MySQL/MariaDB or PHP for this project (aaPanel may install them anyway;
+  harmless — MariaDB uses 3306 and never touches Odoo's PostgreSQL on 5432).
 
-## Step 4 — Get the code + env files onto the box
-From your machine (envs are gitignored — copy them explicitly):
+## 1. DNS first
+A-records → the VPS IP. Let's Encrypt fails otherwise:
 ```bash
-scp -r "semantic-search-backend" "woocommerce-api-wrapper" "bot-dashboard" root@<VPS_IP>:/opt/iconnect/
+dig +short n8n.iconnect-intl.com
 ```
-(Or `git clone` each, then `scp` just the `.env` / `.env.local` files.)
+Must return the server's IP before you request a certificate.
 
-## Step 5 — Backend A (semantic search, internal :8080)
-```bash
-cd /opt/iconnect/semantic-search-backend && npm install --include=dev && npm run build && pm2 start dist/index.js --name backend-a
-curl http://localhost:8080/health    # -> {"status":"ok"}
-```
-`.env` already holds Azure embedding + Supabase keys. No re-index (Supabase already has the 708 products).
+## 2. Create each site
+**Website → Add site** → bind the subdomain → static / no PHP / no database.
 
-## Step 6 — Backend B (WooCommerce wrapper, internal :8081)
-```bash
-cd /opt/iconnect/woocommerce-api-wrapper && npm install --include=dev && npm run build && pm2 start dist/index.js --name backend-b
-curl http://localhost:8081/health
-curl "http://localhost:8081/api/products?per_page=2&search=cat6"
-```
-`.env` already has `WC_COOKIE=humans_21909=1` + full UA + `SEMANTIC_BACKEND_URL=http://localhost:8080`.
+## 3. Reverse proxy
+Open the site → **Reverse Proxy → Add**:
+- **Target URL:** `http://127.0.0.1:3000` (dashboard) or `http://127.0.0.1:5678` (n8n)
+- **Send Domain:** `$host`
+- Enable the **WebSocket** toggle for n8n
 
-## Step 7 — Dashboard (Next.js, public :3000)
-Set the n8n webhook **before building** (NEXT_PUBLIC_* is baked at build time):
-```bash
-cd /opt/iconnect/bot-dashboard
-# in .env.local set:  NEXT_PUBLIC_N8N_AGENT_WEBHOOK_URL=https://n8n.<DOMAIN>/webhook/wa-agent-send
-npm install && npm run build && pm2 start npm --name dashboard -- start   # serves on :3000
-```
-
-## Step 8 — n8n (public :5678)
-```bash
-sudo npm install -g n8n
-# create /root/.n8n-env  (pm2 will load these):
-```
-Env for running behind the aaPanel HTTPS reverse proxy:
-```
-N8N_HOST=n8n.<DOMAIN>
-N8N_PORT=5678
-N8N_PROTOCOL=https
-N8N_EDITOR_BASE_URL=https://n8n.<DOMAIN>/
-WEBHOOK_URL=https://n8n.<DOMAIN>/
-N8N_PROXY_HOPS=1
-GENERIC_TIMEZONE=Asia/Riyadh
-N8N_SECURE_COOKIE=true
-```
-Start under pm2 (data + encryption key persist in `/root/.n8n` — back that folder up):
-```bash
-pm2 start n8n --name n8n
-pm2 save && pm2 startup   # run the line it prints, so all 4 survive reboot
-```
-
-## Step 9 — aaPanel reverse-proxy sites + SSL (the SSL you wanted)
-For **each** public subdomain (`dash.<DOMAIN>` → 3000, `n8n.<DOMAIN>` → 5678):
-1. **Website → Add site** → bind the subdomain (pick "static/pure" — no PHP, no DB).
-2. Open the site → **Reverse Proxy → Add**:
-   - Target URL: `http://127.0.0.1:3000` (dashboard) or `http://127.0.0.1:5678` (n8n)
-   - Send Domain: `$host`
-3. Open the site → **SSL → Let's Encrypt** → select the domain → **Apply**. Turn on **Force HTTPS** + auto-renew (aaPanel renews automatically).
-
-**n8n needs WebSocket + long timeouts** — in the n8n site's Reverse Proxy config (Conf), ensure:
+Then open that proxy's config file and ensure these directives exist — **required for n8n**:
 ```nginx
 proxy_http_version 1.1;
 proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection "upgrade";
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
 proxy_read_timeout 3600s;
 proxy_send_timeout 3600s;
+proxy_buffering off;
 ```
-(aaPanel's "WebSocket" toggle in the reverse-proxy dialog sets the first three; add the timeouts if long executions get cut.)
 
-## Step 10 — Firewall lockdown (aaPanel → Security)
-Allow **only**: `22` (SSH), `80`, `443`, and the **panel port**. Leave `8080`, `8081`, `5678`, `3000`, `5432` **not** open to the internet (they're reached via Nginx or localhost). Postgres is already localhost-only.
+**Why each matters for n8n:**
+- `Upgrade` / `Connection` — n8n runs `N8N_PUSH_BACKEND=websocket`; without them the editor
+  shows a permanent "Connection lost" banner.
+- `proxy_read_timeout 3600s` — aaPanel defaults to ~60 s, which kills long executions mid-run.
+- `X-Forwarded-Proto` — pairs with `N8N_PROXY_HOPS=1` so n8n generates correct `https://` URLs.
+- `proxy_buffering off` — keeps live execution updates streaming.
 
-## Step 11 — Migrate the WhatsApp workflow to the new n8n
-1. In the **old** n8n (`n8n.asra3.com`) export workflow `qz1II8EwuKTJiQDy` (⋯ → Download).
-2. In the **new** n8n import it.
-3. Repoint the 5 backend tool URLs: `https://search.asra3.com` → `http://127.0.0.1:8080`, `https://api.asra3.com` → `http://127.0.0.1:8081`.
-4. Recreate credentials on the new n8n: Supabase (REST), the AI model (chat + Analyze Image + Transcribe), Postgres Chat Memory (or swap to Simple Memory), Zernio token in the channel.
-5. Register the Zernio inbound webhook → `https://n8n.<DOMAIN>/webhook/wa-zernio-inbound`.
-6. Set the dashboard channel's `agent_webhook_url` → `https://n8n.<DOMAIN>/webhook/wa-agent-send`.
+## 4. SSL
+Site → **SSL → Let's Encrypt** → select the domain → Apply → enable **Force HTTPS**.
+aaPanel handles renewal automatically.
 
-## Security checklist
-- `.env` files `chmod 600`; never commit.
-- Rotate WooCommerce `ck_/cs_`, and consider fresh Azure/Supabase keys before public launch.
-- Back up `/root/.n8n` (holds the n8n encryption key — losing it makes saved credentials unreadable).
-- aaPanel: strong panel password + keep the random security-path; consider IP-allowlisting the panel port.
+## 5. Verify
+```bash
+curl -sI https://n8n.iconnect-intl.com | head -3
+```
+```bash
+curl -sI https://dash.iconnect-intl.com | head -3
+```
+Open n8n in a browser — the editor must load with **no "Connection lost"** banner (WebSocket proof).
 
-## Quick reference
-| Service | pm2 name | Local | Public |
-|---|---|---|---|
-| Backend A | `backend-a` | `:8080` | internal |
-| Backend B | `backend-b` | `:8081` | internal |
-| Dashboard | `dashboard` | `:3000` | `https://dash.<DOMAIN>` |
-| n8n | `n8n` | `:5678` | `https://n8n.<DOMAIN>` |
+## 6. Firewall
+aaPanel → **Security**: allow only `22`, `80`, `443`, the panel port (`30184`), plus Odoo's
+`8070`. Do **not** open `3000 / 8080 / 8081 / 5678` — they're localhost-bound and proxied.
 
-`pm2 status` · `pm2 logs <name>` · `pm2 restart <name>`
+> ⚠️ Docker's published ports bypass ufw entirely. The protection comes from binding
+> `127.0.0.1` in the compose files, not from firewall rules. Never change a container
+> binding to `0.0.0.0` "to test" — that publishes it to the internet immediately.
+
+## Reaching a service before DNS/SSL exists
+Use an SSH tunnel rather than opening a port. From your workstation:
+```bash
+ssh -L 5678:127.0.0.1:5678 root@185.182.185.24
+```
+Then browse `http://localhost:5678` while the session stays open.

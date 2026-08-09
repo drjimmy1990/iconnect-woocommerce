@@ -108,7 +108,11 @@ Odoo PostgreSQL on `127.0.0.1:5432`.
 | Doc | Purpose |
 |---|---|
 | [PROJECT-STATUS.md](PROJECT-STATUS.md) | This file — master tracker |
-| [VPS-DEPLOYMENT.md](VPS-DEPLOYMENT.md) | Deploy backends A+B to the VPS |
+| **[DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)** | **Deployment runbook** — app + n8n stacks, troubleshooting, redeploy-from-scratch |
+| **[AAPANEL-DEPLOYMENT.md](AAPANEL-DEPLOYMENT.md)** | aaPanel sites, reverse proxy, Let's Encrypt |
+| **[SERVER-NOTES.md](SERVER-NOTES.md)** | Host facts, port map, the Odoo co-tenant, security incident |
+| [n8n/docker-compose.yml](n8n/docker-compose.yml) | n8n stack template (live copy lives in the aaPanel Docker dir) |
+| ~~[VPS-DEPLOYMENT.md](VPS-DEPLOYMENT.md)~~ | Superseded — old pm2 (non-Docker) path |
 | [SETUP-STEPS-VPS.md](SETUP-STEPS-VPS.md) | Original backend bring-up steps |
 | [docs/superpowers/specs/2026-08-06-whatsapp-workflow-design.md](docs/superpowers/specs/2026-08-06-whatsapp-workflow-design.md) | WhatsApp workflow design spec |
 | [docs/superpowers/plans/2026-08-06-whatsapp-workflow.md](docs/superpowers/plans/2026-08-06-whatsapp-workflow.md) | WhatsApp workflow implementation plan |

@@ -1,3 +1,15 @@
+# ⛔ SUPERSEDED — VPS Deployment via pm2 (historical)
+
+> **This document is no longer the deployment path.** It describes a pm2 + nginx setup on
+> `asra3.com` with public `search.`/`api.` subdomains. The project now deploys with **Docker
+> Compose** on `185.182.185.24`, with the backends kept **internal** (no public subdomains).
+>
+> **Use instead:** [DOCKER-DEPLOY.md](DOCKER-DEPLOY.md) · [AAPANEL-DEPLOYMENT.md](AAPANEL-DEPLOYMENT.md) · [SERVER-NOTES.md](SERVER-NOTES.md)
+>
+> Kept only as a reference for running the backends without Docker.
+
+---
+
 # VPS Deployment — Backends A + B (asra3.com)
 
 Deploy the two Node backends onto the same VPS that runs n8n (`n8n.asra3.com`) so the workflow can reach them. Supabase and Azure are already cloud-hosted; this only covers A + B.
