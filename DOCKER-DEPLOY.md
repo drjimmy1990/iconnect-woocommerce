@@ -21,33 +21,35 @@ docker --version && docker compose version
 
 ## Step 2 — Clone the repo onto the VPS (git)
 ```bash
-git clone https://github.com/drjimmy1990/iconnect-woocommerce.git /opt/iconnect
-cd /opt/iconnect
+git clone https://github.com/drjimmy1990/iconnect-woocommerce.git /www/wwwroot/iconnect
+cd /www/wwwroot/iconnect
 ```
-> **Private repo?** `git clone https://<GITHUB_TOKEN>@github.com/drjimmy1990/iconnect-woocommerce.git /opt/iconnect`
+> **Private repo?** `git clone https://<GITHUB_TOKEN>@github.com/drjimmy1990/iconnect-woocommerce.git /www/wwwroot/iconnect`
 > (or an SSH deploy key). Public repo → the plain command works.
 
 > `.dockerignore` files keep `node_modules`/`.next` out of the build (a host-built `node_modules` would break the Linux images). Checkout is **LF** on Linux, so scripts run fine despite Windows CRLF warnings.
 
 ## Step 3 — Create the real `.env`
 ```bash
-cd /opt/iconnect
+cd /www/wwwroot/iconnect
 cp .env.example .env
-nano .env          # or scp your ready-made .env into /opt/iconnect/.env
+nano .env          # or scp your ready-made .env into /www/wwwroot/iconnect/.env
 ```
 Fill: Supabase keys, Azure embedding key, WooCommerce `ck_`/`cs_`. `NEXT_PUBLIC_N8N_AGENT_WEBHOOK_URL` is optional — leave blank and set the webhook per-channel in the dashboard UI, or set it to `https://<your-n8n-domain>/webhook/wa-agent-send` (baked at **build** time → rebuild the dashboard if you change it later).
 > `.env` is **gitignored** — create it once; future `git pull`s never touch it.
+> Lock it down: `chmod 600 /www/wwwroot/iconnect/.env`
+> ⚠️ **aaPanel note:** `/www/wwwroot` is where aaPanel puts website document roots. Never point a website's root at `/www/wwwroot/iconnect` — the `.env` holds live secrets and would become web-readable. We only reverse-proxy to the container port, so no site root ever touches this folder.
 
 ## Step 4 — Create the shared network, then build + start
 The network is **external** (shared with your n8n compose), so create it once first — otherwise `up` errors with "network iconnect-network not found":
 ```bash
 docker network create iconnect-network      # once; ignore "already exists"
-cd /opt/iconnect
+cd /www/wwwroot/iconnect
 docker compose config -q                     # validate (silent = OK)
 docker compose up -d --build                 # build the 3 images + start (first run is slow)
 ```
 
-**In the aaPanel GUI instead:** Docker → Compose → Create Project → point it at `/opt/iconnect` (compose file + source folders + `.env` all there) → Deploy. (Still create the network first.)
+**In the aaPanel GUI instead:** Docker → Compose → Create Project → point it at `/www/wwwroot/iconnect` (compose file + source folders + `.env` all there) → Deploy. (Still create the network first.)
 
 ## Step 5 — Verify
 ```bash
@@ -96,7 +98,7 @@ Open only `22`, `80`, `443`, and the panel port. Do **not** open `8080/8081/3000
 
 ## Day-2 operations — update from git
 ```bash
-cd /opt/iconnect
+cd /www/wwwroot/iconnect
 git pull                                    # fetch latest code (never touches .env)
 docker compose up -d --build                # rebuild changed apps + restart
 # handy:
