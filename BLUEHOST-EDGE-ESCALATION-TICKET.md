@@ -1,3 +1,7 @@
+> ⛔ **HISTORICAL — no longer needed.** This escalation was resolved by removing Cloudflare
+> from the store. The API is reachable today using `Cookie: humans_21909=1` + a full browser
+> `User-Agent`. **Current reference:** [curls-n8n-VERIFIED.md](curls-n8n-VERIFIED.md)
+
 # Bluehost Support Escalation Ticket
 
 ## English Version — Send This to Bluehost

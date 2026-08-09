@@ -1,3 +1,11 @@
+> ⛔ **HISTORICAL — Cloudflare is no longer in front of the store.** The origin now answers
+> directly (Apache). The current requirement is different: every request needs
+> `Cookie: humans_21909=1` **and** a full browser `User-Agent`, or the origin returns
+> **409** (JS challenge) / **406** (mod_security). Backend B handles both automatically
+> via `WC_COOKIE` + `USER_AGENT`.
+> **Current reference:** [curls-n8n-VERIFIED.md](curls-n8n-VERIFIED.md) · [PROJECT-STATUS.md](PROJECT-STATUS.md)
+> Kept for background on the original diagnosis.
+
 # Cloudflare Bypass Setup — WooCommerce REST API
 
 **Goal:** Stop Cloudflare from challenging server-to-server API traffic to the WooCommerce REST API (`/store/wp-json/wc/v3/*` and `/store/wp-json/wc/store/*`), so n8n, the chatbot backend, and any integration can reach the API reliably.

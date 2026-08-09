@@ -1,3 +1,8 @@
+> ⛔ **HISTORICAL (2026-08-02) — RESOLVED.** Cloudflare has since been removed from the store.
+> The origin now needs `Cookie: humans_21909=1` + a full browser `User-Agent` (else 409/406),
+> which Backend B sends automatically.
+> **Current reference:** [curls-n8n-VERIFIED.md](curls-n8n-VERIFIED.md)
+
 # تشخيص حجب WooCommerce API بين Bluehost وCloudflare
 
 **النطاق:** `https://iconnect-intl.com/store`  

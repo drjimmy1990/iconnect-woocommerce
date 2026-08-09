@@ -1,5 +1,10 @@
 # WooCommerce Semantic Commerce System
 
+> **Deploying?** Start at **[DOCKER-DEPLOY.md](DOCKER-DEPLOY.md)** (runbook + troubleshooting),
+> then [AAPANEL-DEPLOYMENT.md](AAPANEL-DEPLOYMENT.md) (reverse proxy + SSL).
+> Host/server specifics: [SERVER-NOTES.md](SERVER-NOTES.md) · Overall state: [PROJECT-STATUS.md](PROJECT-STATUS.md).
+> This README describes the backends' design and APIs.
+
 A three-piece architecture that turns a standard WooCommerce store (iconnect-intl.com) into an AI-driven, Arabic-capable shopping assistant. An **n8n AI agent** (user-built) talks to two Node.js backends over HTTP — a **WooCommerce API Wrapper (B)** for catalog, orders, and tracking, and a **Semantic Search Backend (A)** for vector/keyword/hybrid product search. Backend B syncs product data into backend A automatically (webhook + delta-sync + bulk-load), so the search index stays fresh with zero n8n involvement.
 
 ```
