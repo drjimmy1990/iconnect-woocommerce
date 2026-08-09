@@ -14,9 +14,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - api/health (container healthcheck — must return 200 JSON, not an
+     *   auth redirect; it exposes no data beyond a liveness flag)
      * This ensures the middleware runs on all pages and API routes
      * but ignores static assets for performance.
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/health).*)',
   ],
 };

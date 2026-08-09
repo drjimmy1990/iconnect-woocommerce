@@ -1,7 +1,11 @@
 # iConnect WhatsApp Store Bot — Project Status (Master Tracker)
 
-**Last updated:** 2026-08-06
+**Last updated:** 2026-08-09
 **Single source of truth** for the whole project. Other docs are linked below.
+
+> **🚀 Deployed 2026-08-09** — backends A+B and the dashboard now run in Docker on the
+> owner's Contabo VPS `185.182.185.24` at `/www/wwwroot/iconnect`, all three `healthy`.
+> See [DOCKER-DEPLOY.md](DOCKER-DEPLOY.md).
 
 ## What we're building
 A WhatsApp AI shopping assistant for the WooCommerce store `iconnect-intl.com/store`, managed through a CRM/chat dashboard. Customers chat on WhatsApp → an n8n AI agent searches products (semantic + catalog), places orders (→ Telr payment link), tracks orders, and hands off to humans. A Next.js dashboard shows conversations, clients, and analytics.
@@ -26,11 +30,11 @@ Everything is per-channel **config-driven** from Supabase (`channels`/`channel_c
 ## Components & status
 | Component | Location | Status |
 |---|---|---|
-| Backend A — semantic search | `semantic-search-backend/` | ✅ Built, tested. 708 products indexed in Supabase. Runs locally; **needs VPS deploy**. |
-| Backend B — WooCommerce wrapper | `woocommerce-api-wrapper/` | ✅ Built, tested (cookie/UA/order/track). Runs locally; **needs VPS deploy**. |
+| Backend A — semantic search | `semantic-search-backend/` | ✅ **Deployed** on VPS (Docker, internal `127.0.0.1:8080`), healthy. 708 products indexed. |
+| Backend B — WooCommerce wrapper | `woocommerce-api-wrapper/` | ✅ **Deployed** on VPS (Docker, internal `127.0.0.1:8081`), healthy. |
 | Supabase DB (search) | project `uorfbqhsaxoofzqouqsj` | ✅ `documents` table + pgvector + RLS. |
 | Supabase DB (dashboard/CRM) | same project | ✅ `database_setup_final.sql` run; all tables present. |
-| Dashboard (Next.js) | `bot-dashboard/` | ✅ Running locally (:3000), admin logged in. |
+| Dashboard (Next.js) | `bot-dashboard/` | ✅ **Deployed** on VPS (Docker, `127.0.0.1:3000`), healthy. Needs `dash.ai4eg.com` DNS + SSL to be public. |
 | WhatsApp workflow (n8n) | n8n id `qz1II8EwuKTJiQDy` | ✅ Built (39 nodes) & **active** — full FB-parity (minus comments): debounce/waiting queue, Postgres memory, media handling (image **vision** + audio **transcription** + text), **intent Switch** (6 branches incl. real send-image), auto dashboard-table recording via DB triggers. Needs credentials + VPS to go live. |
 
 ## WhatsApp workflow build progress (plan: `docs/superpowers/plans/2026-08-06-whatsapp-workflow.md`)
@@ -53,10 +57,35 @@ Everything is per-channel **config-driven** from Supabase (`channels`/`channel_c
 
 **Optional further FB-parity (not built):** inbound media handling (audio transcription / image description), contact `last_message_preview`/`last_interaction_at` updates, keyword AI-toggle. Ask if you want these added.
 
+## Deployment (VPS `185.182.185.24`, Contabo, Ubuntu 20.04)
+Docker Compose at `/www/wwwroot/iconnect` (repo cloned from GitHub; one root `.env`, gitignored).
+All app ports bind **`127.0.0.1` only**; aaPanel nginx does the public HTTPS.
+
+| Service | Container | Port (internal) | Public |
+|---|---|---|---|
+| Backend A | `iconnect-semantic-search` | 8080 | — (internal) |
+| Backend B | `iconnect-wc-wrapper` | 8081 | — (internal) |
+| Dashboard | `iconnect-dashboard` | 3000 | `dash.ai4eg.com` (pending DNS+SSL) |
+| n8n | user's own compose | 5678 | `n8n.ai4eg.com` (pending) |
+
+Shared Docker network **`iconnect-network`** (external) lets n8n reach the backends by
+service name: `http://semantic-search:8080`, `http://woocommerce-wrapper:8081`.
+
+**Also on this box (do not disturb):** the owner's Odoo 17 (`:8070`/`:8072`) + host PostgreSQL 16
+(`127.0.0.1:5432`, 7 databases), aaPanel (`:80/:443/:888/:30184`), MariaDB (`:3306`).
+
+> ⚠️ **Security incident 2026-08-09:** this VPS was found running an XMRig Monero miner
+> (`/var/tmp/.odoo_pg_health` → `pool.hashvault.pro`) plus two malicious crontabs and an SSH
+> backdoor key (`ElPatrono1337`) dating to Sep 2024. Cleaned: crontabs removed, payloads deleted,
+> malicious Odoo `ir_cron` `_db_health_monitor` disabled in the `Alseba3y` DB, C2 `111.90.145.139`
+> blocked. Entry vector = weak Odoo/Postgres creds (`db_password = odoo17`, `admin_passwd = iconnect2024`).
+> **Still to do (owner):** rotate those passwords, set `list_db = False`. Evidence in `/root/ioc-backup/`.
+
 ## Blockers (needed from the user)
-1. **Deploy backends A + B to the VPS** — see [VPS-DEPLOYMENT.md](VPS-DEPLOYMENT.md). Unblocks Task 5.
-2. **Zernio bearer token + store WhatsApp `accountId`** — unblocks Tasks 6–9 (sending).
-3. **AI model choice + n8n credential** — unblocks Task 4 (the agent).
+1. **DNS A-records** `n8n.ai4eg.com` + `dash.ai4eg.com` → `185.182.185.24`, then aaPanel SSL.
+2. **Deploy n8n** (own compose) joined to `iconnect-network`, then import workflow + repoint tool URLs.
+3. **Zernio bearer token + store WhatsApp `accountId`** — unblocks sending.
+4. **AI model credential in n8n** — for the agent chat model + Analyze Image + Transcribe nodes.
 
 ## Key facts & identifiers
 - **Store:** `https://iconnect-intl.com/store` — Classic API `/wp-json/wc/v3` (auth) + Store API `/wp-json/wc/store/v1`.
