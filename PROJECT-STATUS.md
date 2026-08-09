@@ -65,11 +65,18 @@ All app ports bind **`127.0.0.1` only**; aaPanel nginx does the public HTTPS.
 |---|---|---|---|
 | Backend A | `iconnect-semantic-search` | 8080 | — (internal) |
 | Backend B | `iconnect-wc-wrapper` | 8081 | — (internal) |
-| Dashboard | `iconnect-dashboard` | 3000 | `dash.ai4eg.com` (pending DNS+SSL) |
-| n8n | user's own compose | 5678 | `n8n.ai4eg.com` (pending) |
+| Dashboard | `iconnect-dashboard` | 3000 | `dash.iconnect-intl.com` (pending DNS+SSL) |
+| n8n | `iconnect-n8n` (+ `iconnect-n8n-db`) | 5678 | `n8n.iconnect-intl.com` (pending DNS+SSL) |
 
 Shared Docker network **`iconnect-network`** (external) lets n8n reach the backends by
-service name: `http://semantic-search:8080`, `http://woocommerce-wrapper:8081`.
+service name — **verified working 2026-08-09**: `http://semantic-search:8080`,
+`http://woocommerce-wrapper:8081` both answer from inside the n8n container.
+
+**n8n lives in its own stack**, deployed through the aaPanel Docker GUI at
+**`/www/server/panel/data/compose/n8n`** (NOT under the git repo — `git pull` does not
+update it; the tracked template is `n8n/docker-compose.yml`, kept in sync by hand).
+Its Postgres (`iconnect-n8n-db`) is unpublished, so it never collides with the host's
+Odoo PostgreSQL on `127.0.0.1:5432`.
 
 **Also on this box (do not disturb):** the owner's Odoo 17 (`:8070`/`:8072`) + host PostgreSQL 16
 (`127.0.0.1:5432`, 7 databases), aaPanel (`:80/:443/:888/:30184`), MariaDB (`:3306`).
