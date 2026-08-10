@@ -99,6 +99,25 @@ is: put it behind `odoo.iconnect-intl.com` with nginx + Let's Encrypt, then clos
 Also consider `ALTER USER odoo17 NOSUPERUSER` — superuser is what lets a web-level compromise run
 `COPY … FROM PROGRAM` and get a shell as the `postgres` OS user (the account every miner ran under).
 
+## ✅ Hardening completed — 2026-08-10 ~15:11
+All four attacker vectors closed and verified; load dropped 31 → 0.25, no miner, empty
+`postgres` crontab, no malicious deleted-binary processes.
+
+| Vector | Fix | Verified |
+|---|---|---|
+| `db_password = odoo17` | rotated → random 22-char | all 7 DBs reconnect, crons run |
+| `admin_passwd = iconnect2024` | rotated → random 32-char | in config |
+| SSH backdoor key `ElPatrono1337` | file emptied (Aug 9 18:21) | 0 bytes |
+| `odoo17` SUPERUSER (`COPY … FROM PROGRAM` → OS shell) | `ALTER USER odoo17 NOSUPERUSER; CREATEDB` | Odoo healthy without it (303, no perm errors) |
+| C2 `111.90.145.139` + `31.77.227.130` | `ufw deny out` | — |
+
+**New passwords are stored ONLY in `/odoo/odoo17.conf`** (`db_password`, `admin_passwd`) — hand them to the owner via a password manager. `admin_passwd` is needed only for DB backup/restore/create, never for normal login.
+Fixed a trailing-space bug in `logfile = ` that was breaking Odoo's file logging.
+
+**Monitoring window:** waves 1 & 2 returned within hours *using the now-changed credentials*, so
+continued quiet = incident closed. If a miner returns anyway, the vector is an Odoo **application**
+vuln on the public port → next step is nginx + WAF (`odoo.iconnect-intl.com` reverse proxy) or rebuild.
+
 ### ❗ Still owed by the owner
 1. Rotate the PostgreSQL password off `odoo17` (DB **and** `/odoo/odoo17.conf`)
 2. Change `admin_passwd`; set `list_db = False`
