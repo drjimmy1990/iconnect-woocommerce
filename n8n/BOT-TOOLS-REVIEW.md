@@ -153,7 +153,42 @@ There is no ownership check on the endpoint. If the model supplies the phone, a
 customer can ask to "track the order for 05xxxxxxxx" and receive a stranger's order.
 Bind it to the verified WhatsApp sender and describe the tool as taking no input.
 
-### 4. Model choice
+### 4. 🔴 `get_product` hangs forever — fixed in the wrapper
+
+Observed 2026-08-11: the `get_product` tool ran endlessly and returned nothing.
+
+**Cause (backend, not n8n):** `request()` in `wc-client.ts` retried *every* thrown
+error, including a plain `404`. With `MAX_RETRIES = 8`, `RETRY_SLEEP_MS = 2000` and a
+30s axios timeout, one wrong product ID cost up to:
+
+```
+8 × 30s (timeout) + 7 × 2s (sleep) = 254 seconds
+```
+
+WooCommerce answers a 404 identically every time, so all 8 attempts were guaranteed
+to fail. The n8n tool call just sat there; the agent then retried the tool and the
+execution never converged.
+
+**Fixed** by `shouldRetry()` — only origin blocks (403/406/409), `429`, `5xx` and
+network/timeout errors are retried. A `404`/`400` now returns immediately.
+
+**Trigger:** `$fromAI('parameters0_Name', …, 'string')` in the URL. The model has no
+idea what `parameters0_Name` means, so it sends a junk or wrong id → 404 → 254s hang.
+Fixing the parameter name (§2) removes the trigger; the backend fix removes the hang.
+
+```bash
+cd /www/wwwroot/iconnect && git pull && docker compose up -d --build woocommerce-wrapper
+```
+
+Confirm the fix is live — this must come back in well under a second, not minutes:
+```bash
+docker exec -it iconnect-n8n sh -c 'time wget -qO- http://woocommerce-wrapper:8081/api/products/99999999'
+```
+
+> Still outstanding: a genuinely unresponsive origin can retry 8 × 30s. If that
+> bites, add an overall deadline to `request()` rather than raising the sleep.
+
+### 5. Model choice
 `gpt-4o-mini` is weak at multi-step tool use and was a contributing cause. Use `gpt-4o`
 or another strong tool-using model for the agent's chat model.
 

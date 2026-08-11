@@ -29,6 +29,11 @@ const WC_COOKIE = process.env.WC_COOKIE || "humans_21909=1";
 
 const MAX_RETRIES = 8;
 const RETRY_SLEEP_MS = 2000;
+/**
+ * Statuses that mean "the origin blocked us", not "your request was wrong".
+ * Only these (plus 429/5xx/network errors) are worth retrying — see shouldRetry().
+ */
+const CHALLENGE_STATUSES = [403, 406, 409];
 const MAX_PAGE_CAP = 1000; // safety cap on total items fetched
 
 /* ------------------------------------------------------------------ */
@@ -65,6 +70,23 @@ function isJsonResponse(data: unknown): boolean {
 }
 
 /**
+ * Decide whether a thrown request error is worth another attempt.
+ *
+ * Retrying a 404/400 is pure latency: WooCommerce will answer identically every
+ * time. With MAX_RETRIES=8 and a 30s axios timeout, blindly retrying made one
+ * bad product ID hang for up to 8*30s + 7*2s = 254s, which stalled the n8n AI
+ * agent's tool call indefinitely. Only origin blocks, rate limits, server
+ * errors and network faults are retried.
+ */
+function shouldRetry(err: any): boolean {
+  const status = err?.response?.status;
+  if (status === undefined) return true; // network error / timeout — no response at all
+  if (CHALLENGE_STATUSES.includes(status)) return true;
+  if (status === 429) return true;
+  return status >= 500;
+}
+
+/**
  * Core request wrapper with Cloudflare retry-until-JSON logic.
  * On each attempt: if we get HTML / 403 / non-JSON, sleep and retry.
  * Resolves on first JSON response.
@@ -91,7 +113,7 @@ export async function request<T = any>(
 
       // Origin challenges return HTML or a 4xx block (Cloudflare 403 [now
       // removed], SiteLock 409, mod_security 406). Retry until a real JSON body.
-      if ([403, 406, 409].includes(res.status) || !isJsonResponse(res.data)) {
+      if (CHALLENGE_STATUSES.includes(res.status) || !isJsonResponse(res.data)) {
         if (attempt < maxRetries - 1) {
           await sleep(RETRY_SLEEP_MS);
           continue;
@@ -100,14 +122,9 @@ export async function request<T = any>(
       return res;
     } catch (err: any) {
       lastError = err;
-      // Axios throws on non-2xx by default; origin blocks are 403/406/409.
-      if ([403, 406, 409].includes(err?.response?.status) || err?.code === "ECONNABORTED") {
-        if (attempt < maxRetries - 1) {
-          await sleep(RETRY_SLEEP_MS);
-          continue;
-        }
-      }
-      // For other errors, also retry once or twice
+      // Axios throws on non-2xx. A 404/400 is a final answer — surface it now
+      // instead of sleeping through 8 attempts (see shouldRetry).
+      if (!shouldRetry(err)) break;
       if (attempt < maxRetries - 1) {
         await sleep(RETRY_SLEEP_MS);
         continue;
