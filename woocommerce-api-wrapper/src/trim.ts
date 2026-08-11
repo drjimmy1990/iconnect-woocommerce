@@ -89,6 +89,9 @@ export function trimProduct(wcProduct: any) {
     type: wcProduct.type || "simple",
     status: wcProduct.status || "publish",
     image_url: images[0] || "",
+    // All gallery image URLs. The bot's product_details intent sends these to the
+    // customer; image_url is kept as the single "main" image for back-compat.
+    images,
     permalink: wcProduct.permalink || "",
     category_ids: categoryIds,
     category_names: categoryNames,
