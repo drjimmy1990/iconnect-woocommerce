@@ -204,17 +204,6 @@ router.get("/orders", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/orders/:id", async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid order ID" });
-    const order = await getOrder(id);
-    res.json(trimOrder(order));
-  } catch (err: any) {
-    res.status(err.status || 400).json({ error: err.message });
-  }
-});
-
 /* ------------------------------------------------------------------ */
 /* Order Tracking                                                     */
 /* ------------------------------------------------------------------ */
@@ -231,11 +220,27 @@ const trackQuerySchema = z
     { message: "Provide order_id+order_key, or email, or phone" },
   );
 
+/**
+ * IMPORTANT: this literal route MUST stay above "/orders/:id".
+ * Express matches in registration order, so "/orders/:id" would otherwise
+ * capture "/orders/track" with id="track" and reject it as an invalid ID.
+ */
 router.get("/orders/track", async (req: Request, res: Response) => {
   try {
     const q = trackQuerySchema.parse(req.query);
     const order = await trackOrder(q);
     if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(trimOrder(order));
+  } catch (err: any) {
+    res.status(err.status || 400).json({ error: err.message });
+  }
+});
+
+router.get("/orders/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid order ID" });
+    const order = await getOrder(id);
     res.json(trimOrder(order));
   } catch (err: any) {
     res.status(err.status || 400).json({ error: err.message });
