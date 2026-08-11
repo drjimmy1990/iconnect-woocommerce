@@ -36,6 +36,17 @@ export const searchSchema = z.object({
     match_threshold: z.number().min(0).max(1).default(0.3),
     /** Optional jsonb filter applied via `metadata @> filter` in SQL. */
     filters: z.record(z.string(), z.unknown()).optional(),
+    /**
+     * Optional projection: return only these metadata keys on each hit.
+     * Omitted -> the whole metadata object, as before.
+     *
+     * Indexed metadata can be large (image URLs, permalinks, category arrays).
+     * Feeding all of it to an LLM for every hit is wasted context when the
+     * caller only needs a couple of fields to present a shortlist. Stays
+     * domain-agnostic: the caller names the keys, the service knows nothing
+     * about them.
+     */
+    fields: z.array(z.string().min(1)).min(1).max(50).optional(),
 });
 
 export type SearchRequest = z.infer<typeof searchSchema>;

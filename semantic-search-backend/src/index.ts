@@ -127,7 +127,7 @@ app.post("/search", async (req: Request, res: Response) => {
         });
     }
 
-    const { query, top_k, mode, match_threshold, filters } = parsed.data;
+    const { query, top_k, mode, match_threshold, filters, fields } = parsed.data;
 
     try {
         let rows: { id: string; score: number; metadata: Record<string, unknown> }[] = [];
@@ -170,11 +170,23 @@ app.post("/search", async (req: Request, res: Response) => {
             rows = (data ?? []) as typeof rows;
         }
 
-        // Map rows to the standard response shape
+        // Map rows to the standard response shape, applying the optional
+        // `fields` projection. Missing keys are simply omitted rather than
+        // returned as null, so a caller asking for a key this corpus doesn't
+        // have gets a smaller object, not a wall of nulls.
+        const project = (metadata: Record<string, unknown>) => {
+            if (!fields) return metadata;
+            const out: Record<string, unknown> = {};
+            for (const key of fields) {
+                if (metadata && key in metadata) out[key] = metadata[key];
+            }
+            return out;
+        };
+
         const results = rows.map((row) => ({
             id: row.id,
             score: row.score,
-            metadata: row.metadata,
+            metadata: project(row.metadata),
         }));
 
         return res.json({ results });
