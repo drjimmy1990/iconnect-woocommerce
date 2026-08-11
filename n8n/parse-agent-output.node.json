@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// Parse AI Agent Output — iConnect WhatsApp Store Bot\n// Paste this into the Code node between \"AI Agent\" and the \"Route Intent\" Switch.\n//\n// Contract produced (always, even on total failure):\n//   { intent, reply, product_id, complaint, order, _parse }\n//\n// intent ∈ conversation | product_details | complaint | customer_service | order_created\n//\n// Why not just JSON.parse(): LLMs wrap output in ```json fences, add prose around\n// it, and emit raw newlines inside strings (invalid JSON). Four strategies below.\n//\n// It NEVER throws and NEVER returns an error-shaped item — a downstream Switch\n// must always get a routable intent, otherwise the customer gets silence.\n// ============================================================================\n\nconst VALID_INTENTS = [\n  'conversation',\n  'product_details',\n  'complaint',\n  'customer_service',\n  'order_created',\n];\n\nconst FALLBACK_REPLY = 'عذراً، حصل خطأ مؤقت. ممكن تعيد رسالتك؟';\n\n/** Build a guaranteed-valid item. */\nfunction ok(intent, reply, extra = {}, parseNote = 'ok') {\n  return [{\n    json: {\n      intent,\n      reply: reply || FALLBACK_REPLY,\n      product_id: extra.product_id ?? null,\n      complaint: extra.complaint ?? null,\n      order: extra.order ?? null,\n      _parse: parseNote, // debugging aid — visible in the n8n execution view\n    },\n  }];\n}\n\n// --- 0. Get the agent's raw text -------------------------------------------\nconst input = $input.first().json;\nconst raw = input.output ?? input.text ?? input.response ?? '';\n\nif (!raw || typeof raw !== 'string') {\n  return ok('conversation', FALLBACK_REPLY, {}, 'no-output-field');\n}\n\n// --- 1. Strategy A: markdown code fence ------------------------------------\nlet jsonString = null;\nconst fence = raw.match(/`{3,}(?:json)?\\s*([\\s\\S]*?)\\s*`{3,}/);\nif (fence && fence[1]) jsonString = fence[1].trim();\n\n// --- 2. Strategy B: first '{' .. last '}' ----------------------------------\nif (!jsonString) {\n  const start = raw.indexOf('{');\n  const end = raw.lastIndexOf('}');\n  if (start > -1 && end > start) jsonString = raw.slice(start, end + 1).trim();\n}\n\n// --- 3. Strategy C: no JSON at all → treat the whole text as the reply ------\nif (!jsonString) {\n  return ok('conversation', raw.trim(), {}, 'plain-text-fallback');\n}\n\n// --- 4. Parse, with a newline-repair retry ---------------------------------\nlet parsed = null;\ntry {\n  parsed = JSON.parse(jsonString);\n} catch (e) {\n  try {\n    // Raw control characters inside JSON strings are the usual culprit.\n    parsed = JSON.parse(\n      jsonString.replace(/\\n/g, '\\\\n').replace(/\\r/g, '\\\\r').replace(/\\t/g, '\\\\t'),\n    );\n  } catch (e2) {\n    return ok('conversation', raw.trim(), {}, 'parse-failed');\n  }\n}\n\nif (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {\n  return ok('conversation', raw.trim(), {}, 'not-an-object');\n}\n\n// --- 5. Normalise the fields ------------------------------------------------\nlet intent = typeof parsed.intent === 'string' ? parsed.intent.trim() : '';\nlet note = 'ok';\n\nif (!VALID_INTENTS.includes(intent)) {\n  note = `unknown-intent:${intent || 'empty'}`;\n  intent = 'conversation';\n}\n\n// Accept `reply`, or the older `botResponse`/`response` spellings.\nlet reply = parsed.reply ?? parsed.botResponse ?? parsed.response ?? '';\nif (typeof reply !== 'string' || !reply.trim()) {\n  reply = raw.trim() || FALLBACK_REPLY;\n  note = 'missing-reply';\n}\nreply = reply.trim();\n\n// product_id must be a positive integer or null.\nlet productId = null;\nif (parsed.product_id !== null && parsed.product_id !== undefined) {\n  const n = Number(parsed.product_id);\n  if (Number.isFinite(n) && n > 0) productId = Math.trunc(n);\n}\n\nconst complaint =\n  typeof parsed.complaint === 'string' && parsed.complaint.trim()\n    ? parsed.complaint.trim()\n    : null;\n\nconst order =\n  parsed.order && typeof parsed.order === 'object' && !Array.isArray(parsed.order)\n    ? parsed.order\n    : null;\n\n// --- 6. Guards: never route to a branch whose required data is missing ------\n// Without these the Switch sends the item down a path that then crashes on an\n// undefined field, and the customer receives nothing at all.\n\nif (intent === 'product_details' && productId === null) {\n  // No product to fetch images for — degrade to a plain text reply.\n  return ok('conversation', reply, {}, 'product_details-without-product_id');\n}\n\nif (intent === 'complaint' && !complaint) {\n  // Keep the complaint branch (staff should still be notified) and use the\n  // reply text as the complaint body.\n  return ok('complaint', reply, { complaint: reply }, 'complaint-body-defaulted');\n}\n\nif (intent === 'order_created' && (!order || !order.order_number)) {\n  // No confirmed order object — do NOT write a bogus crm_orders row.\n  return ok('conversation', reply, {}, 'order_created-without-order');\n}\n\nreturn ok(intent, reply, { product_id: productId, complaint, order }, note);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13800,
+        -736
+      ],
+      "id": "a1b2c3d4-parse-agent-output",
+      "name": "Parse Agent Output"
+    }
+  ],
+  "connections": {
+    "Parse Agent Output": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "5821e05560243b8e1f196d881925f816a4d5b6c217e822180cf0f90e2cc8f1cf"
+  }
+}
