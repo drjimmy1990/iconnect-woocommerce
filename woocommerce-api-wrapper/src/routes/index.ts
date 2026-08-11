@@ -23,6 +23,7 @@ import {
 } from "../wc-client.js";
 import {
   trimProduct,
+  trimProductLite,
   trimOrder,
   trimCategory,
   trimPaymentGateway,
@@ -47,8 +48,14 @@ router.get("/health", (_req: Request, res: Response) => {
 const productsQuerySchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
-  per_page: z.coerce.number().int().min(1).max(50).default(10),
+  // 100 is WooCommerce's own ceiling. Safe to allow now that the default
+  // response is the lite shape (~80 bytes/product instead of ~1.2 KB).
+  per_page: z.coerce.number().int().min(1).max(100).default(10),
   page: z.coerce.number().int().min(1).default(1),
+  // "lite" (default) -> id, name, price, stock_status only. Use "full" when a
+  // caller genuinely needs images/attributes for every row; it is capped lower
+  // because the payload is ~15x bigger.
+  view: z.enum(["lite", "full"]).default("lite"),
   orderby: z.enum(["date", "id", "title", "slug", "price", "popularity"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
   min_price: z.coerce.number().optional(),
@@ -61,10 +68,12 @@ const productsQuerySchema = z.object({
 router.get("/products", async (req: Request, res: Response) => {
   try {
     const q = productsQuerySchema.parse(req.query);
+    // The full shape is heavy; don't let a caller ask for 100 of them at once.
+    const perPage = q.view === "full" ? Math.min(q.per_page, 50) : q.per_page;
     const { data, headers } = await getProducts({
       search: q.search,
       category: q.category,
-      per_page: q.per_page,
+      per_page: perPage,
       page: q.page,
       orderby: q.orderby,
       order: q.order,
@@ -74,7 +83,7 @@ router.get("/products", async (req: Request, res: Response) => {
       featured: q.featured,
       sku: q.sku,
     });
-    const products = data.map(trimProduct);
+    const products = data.map(q.view === "full" ? trimProduct : trimProductLite);
     res.json({
       products,
       total: Number(headers["x-wp-total"]) || products.length,

@@ -101,6 +101,26 @@ export function trimProduct(wcProduct: any) {
   };
 }
 
+/**
+ * Minimal product shape for LIST results.
+ *
+ * A full trimProduct is ~1.2 KB of JSON (images, permalink, every attribute,
+ * short_desc). Ten of those is ~12 KB fed straight into the AI agent's context
+ * on every browse or search — slow, expensive, and it drowns the instructions.
+ *
+ * A list only has to let the model say "here are the options" and pick an id.
+ * Everything else comes from get_product once the customer chooses. That keeps
+ * a 50-product page around 4 KB instead of 60 KB.
+ */
+export function trimProductLite(wcProduct: any) {
+  return {
+    id: wcProduct.id,
+    name: wcProduct.name || "",
+    price: wcProduct.price || "0",
+    stock_status: wcProduct.stock_status || "instock",
+  };
+}
+
 /** Trim a WooCommerce order into a clean response object. */
 export function trimOrder(wcOrder: any) {
   return {
