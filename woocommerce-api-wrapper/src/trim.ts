@@ -159,6 +159,23 @@ export function trimCategory(wcCategory: any) {
   };
 }
 
+/**
+ * Minimal category shape for the LIST endpoint.
+ *
+ * `slug` is a percent-encoded Arabic URL fragment — up to ~150 useless bytes
+ * per row that the bot can do nothing with, and `image` is a banner it never
+ * sends. `parent` and `count` stay: parent lets the model understand the
+ * hierarchy, count lets it skip empty categories.
+ */
+export function trimCategoryLite(wcCategory: any) {
+  return {
+    id: wcCategory.id,
+    name: wcCategory.name || "",
+    parent: wcCategory.parent || 0,
+    count: wcCategory.count || 0,
+  };
+}
+
 /** Trim a WooCommerce payment gateway. */
 export function trimPaymentGateway(wcGateway: any) {
   return {

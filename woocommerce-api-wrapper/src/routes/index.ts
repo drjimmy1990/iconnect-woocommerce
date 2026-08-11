@@ -26,6 +26,7 @@ import {
   trimProductLite,
   trimOrder,
   trimCategory,
+  trimCategoryLite,
   trimPaymentGateway,
   trimShippingZone,
   trimShippingMethod,
@@ -113,8 +114,10 @@ router.get("/products/:id", async (req: Request, res: Response) => {
 router.get("/categories", async (req: Request, res: Response) => {
   try {
     const parent = req.query.parent as string | undefined;
+    // Lite by default (id/name/parent/count); ?view=full adds slug + image.
+    const full = req.query.view === "full";
     const { data } = await getCategories({ per_page: 100, parent });
-    res.json(data.map(trimCategory));
+    res.json(data.map(full ? trimCategory : trimCategoryLite));
   } catch (err: any) {
     res.status(err.status || 400).json({ error: err.message });
   }
