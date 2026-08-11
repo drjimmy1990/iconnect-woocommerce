@@ -36,6 +36,21 @@ const RETRY_SLEEP_MS = 2000;
 const CHALLENGE_STATUSES = [403, 406, 409];
 const MAX_PAGE_CAP = 1000; // safety cap on total items fetched
 
+/**
+ * Hard wall-clock ceiling for one request() call, retries included.
+ *
+ * Retry count alone is not a time bound: 8 attempts x a 30s socket timeout is
+ * 4+ minutes, during which an n8n tool call just hangs and the customer gets
+ * silence. The deadline makes the worst case predictable no matter how the
+ * origin misbehaves. Retries still happen — they just have to fit inside it.
+ *
+ * ATTEMPT_TIMEOUT_MS is per-attempt; it is clamped down further so the last
+ * attempt cannot overshoot the deadline. Both are env-tunable because the
+ * bulk indexer is more patient than a live chat lookup.
+ */
+const DEADLINE_MS = Number(process.env.WC_DEADLINE_MS) || 25000;
+const ATTEMPT_TIMEOUT_MS = Number(process.env.WC_ATTEMPT_TIMEOUT_MS) || 10000;
+
 /* ------------------------------------------------------------------ */
 /* Client setup                                                       */
 /* ------------------------------------------------------------------ */
@@ -100,21 +115,28 @@ export async function request<T = any>(
 ): Promise<AxiosResponse<T>> {
   const maxRetries = _opts.retry ?? MAX_RETRIES;
   let lastError: unknown;
+  const startedAt = Date.now();
+  const timeLeft = () => DEADLINE_MS - (Date.now() - startedAt);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const remaining = timeLeft();
+    if (remaining <= 0) break;
+
     try {
       const config: AxiosRequestConfig = {
         method,
         url: path,
         params,
         data,
+        // Never let a single attempt run past the overall deadline.
+        timeout: Math.min(ATTEMPT_TIMEOUT_MS, remaining),
       };
       const res = await client.request<T>(config);
 
       // Origin challenges return HTML or a 4xx block (Cloudflare 403 [now
       // removed], SiteLock 409, mod_security 406). Retry until a real JSON body.
       if (CHALLENGE_STATUSES.includes(res.status) || !isJsonResponse(res.data)) {
-        if (attempt < maxRetries - 1) {
+        if (attempt < maxRetries - 1 && timeLeft() > RETRY_SLEEP_MS) {
           await sleep(RETRY_SLEEP_MS);
           continue;
         }
@@ -125,14 +147,29 @@ export async function request<T = any>(
       // Axios throws on non-2xx. A 404/400 is a final answer — surface it now
       // instead of sleeping through 8 attempts (see shouldRetry).
       if (!shouldRetry(err)) break;
-      if (attempt < maxRetries - 1) {
+      // A silent retry loop is invisible in `docker compose logs` — which is
+      // exactly what made a stalled origin so hard to diagnose.
+      console.warn(
+        `[wc] retry ${attempt + 1}/${maxRetries} ${method} ${path} — ` +
+          `${err?.code || err?.response?.status || err?.message} ` +
+          `(${timeLeft()}ms of budget left)`,
+      );
+      // Don't burn the remaining budget on a sleep we can't follow with a try.
+      if (attempt < maxRetries - 1 && timeLeft() > RETRY_SLEEP_MS) {
         await sleep(RETRY_SLEEP_MS);
         continue;
       }
+      break;
     }
   }
 
-  throw lastError ?? new Error(`Request failed after ${maxRetries} retries: ${method} ${path}`);
+  const elapsed = Date.now() - startedAt;
+  throw (
+    lastError ??
+    new Error(
+      `Request failed after ${elapsed}ms (deadline ${DEADLINE_MS}ms): ${method} ${path}`,
+    )
+  );
 }
 
 /**
