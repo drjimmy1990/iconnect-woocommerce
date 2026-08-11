@@ -57,6 +57,15 @@ services:
       - WC_WEBHOOK_SECRET=${WC_WEBHOOK_SECRET}
       - SYNC_ENABLED=${SYNC_ENABLED:-true}
       - SYNC_INTERVAL_MIN=${SYNC_INTERVAL_MIN:-5}
+      # Wall-clock ceiling per WooCommerce call (all retries) and per attempt.
+      # Raise both if the store's REST API is genuinely slow rather than down.
+      - WC_DEADLINE_MS=${WC_DEADLINE_MS:-25000}
+      - WC_ATTEMPT_TIMEOUT_MS=${WC_ATTEMPT_TIMEOUT_MS:-10000}
+    volumes:
+      # Persist the delta-sync high-water mark. Without this, every rebuild
+      # resets it to 1970 and the next sync re-reads all 708 products from the
+      # store — a full crawl against an origin that is already struggling.
+      - wc-sync-data:/app/data
     depends_on:
       semantic-search:
         condition: service_healthy
@@ -95,6 +104,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+
+volumes:
+  # Delta-sync state for the WooCommerce wrapper. Survives `up -d --build`.
+  wc-sync-data:
 
 # n8n is deployed SEPARATELY (your own compose). Attach its service to the shared
 # external `iconnect-network` above so it can call the backends by service name.
