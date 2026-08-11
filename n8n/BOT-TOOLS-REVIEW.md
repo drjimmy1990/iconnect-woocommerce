@@ -115,6 +115,53 @@ curl "http://woocommerce-wrapper:8081/api/products?on_sale=true&per_page=5"
 
 ---
 
+---
+
+## ⚠️ Wiring the tools in n8n — mistakes that make the agent skip tools
+
+Observed 2026-08-11: the agent answered *"ما عندنا كاميرات"* without ever calling a
+search tool. Three causes, all fixed by the rules below.
+
+### 1. Every model-supplied value must be a `$fromAI()` expression
+A plain `{search}` string is **not** a placeholder in `httpRequestTool` — it is sent
+literally, so the API receives `?search={search}` and returns nothing.
+
+```
+❌  "value": "{search}"
+✅  "value": "={{ $fromAI('search', 'Product keyword, model or SKU', 'string') }}"
+```
+(note the leading `=` — without it the field is not an expression at all)
+
+### 2. Name the parameter properly — the model reads that name
+`$fromAI`'s **first argument is the parameter name exposed to the model**. n8n
+auto-fills placeholders like `parameters0_Value` / `parameters0_Name`; leaving them
+means the model is offered a parameter called "parameters0_Value" and tool-calling
+accuracy drops sharply.
+
+| Tool | Correct expression |
+|---|---|
+| `semantic_search` (body `query`) | `={{ $fromAI('query', 'The customer product request in natural Arabic', 'string') }}` |
+| `search_catalog` (query `search`) | `={{ $fromAI('search', 'Product keyword, model or SKU', 'string') }}` |
+| `browse_category` (query `category`) | `={{ $fromAI('category_id', 'Numeric category ID from list_categories', 'number') }}` |
+| `get_product` (URL path) | `=http://woocommerce-wrapper:8081/api/products/{{ $fromAI('product_id', 'The numeric product ID', 'number') }}` |
+| `track_order` (query `phone`) | `={{ $('Normalize').first().json.phone }}` — **session-bound, not `$fromAI`** |
+
+Use type `'number'` for ids so the model doesn't send `"482"` as a string.
+
+### 3. `track_order` must NOT take the phone from the model
+There is no ownership check on the endpoint. If the model supplies the phone, a
+customer can ask to "track the order for 05xxxxxxxx" and receive a stranger's order.
+Bind it to the verified WhatsApp sender and describe the tool as taking no input.
+
+### 4. Model choice
+`gpt-4o-mini` is weak at multi-step tool use and was a contributing cause. Use `gpt-4o`
+or another strong tool-using model for the agent's chat model.
+
+**How to confirm it's fixed:** send "عندكم كاميرات؟" and open the n8n execution view —
+you must see a `semantic_search` / `search_catalog` call *before* the final JSON.
+
+---
+
 ## Running these by hand
 
 The service names don't resolve from the host shell. Run from inside the n8n container:
