@@ -45,8 +45,21 @@ export const searchSchema = z.object({
      * caller only needs a couple of fields to present a shortlist. Stays
      * domain-agnostic: the caller names the keys, the service knows nothing
      * about them.
+     *
+     * Accepts either a real array or a comma-separated string. n8n's HTTP
+     * "Body Parameters" field mode can only send strings, so an array
+     * expression arrives as "name,price,stock_status\n" — parse that too
+     * rather than making every caller switch to raw-JSON body mode.
      */
-    fields: z.array(z.string().min(1)).min(1).max(50).optional(),
+    fields: z
+        .union([z.array(z.string()), z.string()])
+        .optional()
+        .transform((value) => {
+            if (value === undefined) return undefined;
+            const parts = Array.isArray(value) ? value : value.split(",");
+            const cleaned = parts.map((p) => String(p).trim()).filter(Boolean);
+            return cleaned.length ? cleaned.slice(0, 50) : undefined;
+        }),
 });
 
 export type SearchRequest = z.infer<typeof searchSchema>;
