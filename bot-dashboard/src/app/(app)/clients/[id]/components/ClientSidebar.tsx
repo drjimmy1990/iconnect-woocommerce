@@ -6,19 +6,19 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import HeightIcon from '@mui/icons-material/Height';
-import CakeIcon from '@mui/icons-material/Cake';
-import MonitorWeightIcon from '@mui/icons-material/MonitorWeight';
 import { CrmClient, Contact } from '@/lib/api';
 
+// step 0 = off-funnel (not part of the ordered funnel progression)
 const STAGE_CONFIG: Record<string, { label: string; color: string; step: number }> = {
     first_contact: { label: 'First Contact', color: '#94a3b8', step: 1 },
-    bmi_collected: { label: 'BMI Collected', color: '#3b82f6', step: 2 },
-    testimonials_viewed: { label: 'Testimonials', color: '#8b5cf6', step: 3 },
-    price_viewed: { label: 'Price Viewed', color: '#f59e0b', step: 4 },
-    purchased: { label: 'Purchased', color: '#22c55e', step: 5 },
+    browsing: { label: 'Browsing', color: '#667eea', step: 2 },
+    product_viewed: { label: 'Product Viewed', color: '#4facfe', step: 3 },
+    order_placed: { label: 'Order Placed', color: '#f59e0b', step: 4 },
+    purchased: { label: 'Purchased', color: '#38ef7d', step: 5 },
+    support: { label: 'Support', color: '#ef4444', step: 0 },
 };
+
+const FUNNEL_STAGES = Object.values(STAGE_CONFIG).filter((s) => s.step > 0);
 
 interface ClientSidebarProps {
     client: CrmClient;
@@ -36,9 +36,8 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
 
     const currentStage = client?.conversation_stage || 'first_contact';
     const stageInfo = STAGE_CONFIG[currentStage] || STAGE_CONFIG.first_contact;
-    const stageProgress = (stageInfo.step / 5) * 100;
-
-    const bmi = client?.bmi_data;
+    const isOffFunnel = stageInfo.step === 0;
+    const stageProgress = isOffFunnel ? 0 : (stageInfo.step / FUNNEL_STAGES.length) * 100;
 
     return (
         <Box sx={{ p: 3, height: '100%', borderRight: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
@@ -97,7 +96,7 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
                         }}
                     />
                     <Typography variant="caption" color="text.secondary">
-                        {stageInfo.step}/5
+                        {isOffFunnel ? 'Off-funnel' : `${stageInfo.step}/${FUNNEL_STAGES.length}`}
                     </Typography>
                 </Box>
                 <LinearProgress
@@ -114,92 +113,20 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
                     }}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    {Object.values(STAGE_CONFIG).map((s) => (
+                    {FUNNEL_STAGES.map((s) => (
                         <Box
                             key={s.label}
                             sx={{
                                 width: 8,
                                 height: 8,
                                 borderRadius: '50%',
-                                bgcolor: s.step <= stageInfo.step ? stageInfo.color : 'grey.300',
+                                bgcolor: !isOffFunnel && s.step <= stageInfo.step ? stageInfo.color : 'grey.300',
                                 transition: 'background-color 0.3s',
                             }}
                         />
                     ))}
                 </Box>
             </Box>
-
-            {/* BMI Data */}
-            {bmi && (
-                <>
-                    <Divider sx={{ my: 3 }} />
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        BMI DATA
-                    </Typography>
-                    <Box
-                        sx={{
-                            bgcolor: 'grey.50',
-                            borderRadius: 2,
-                            p: 2,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                        }}
-                    >
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <FitnessCenterIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" display="block" lineHeight={1}>Weight</Typography>
-                                    <Typography variant="body2" fontWeight={600}>{bmi.weight} kg</Typography>
-                                </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <HeightIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" display="block" lineHeight={1}>Height</Typography>
-                                    <Typography variant="body2" fontWeight={600}>{bmi.height} cm</Typography>
-                                </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CakeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" display="block" lineHeight={1}>Age</Typography>
-                                    <Typography variant="body2" fontWeight={600}>{bmi.age} yrs</Typography>
-                                </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <MonitorWeightIcon sx={{ fontSize: 16, color: bmi.bmi >= 30 ? 'error.main' : bmi.bmi >= 25 ? 'warning.main' : 'success.main' }} />
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" display="block" lineHeight={1}>BMI</Typography>
-                                    <Typography
-                                        variant="body2"
-                                        fontWeight={700}
-                                        color={bmi.bmi >= 30 ? 'error.main' : bmi.bmi >= 25 ? 'warning.main' : 'success.main'}
-                                    >
-                                        {bmi.bmi.toFixed(1)}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Box>
-                        <Chip
-                            label={
-                                bmi.bmi >= 30 ? 'Obese' :
-                                bmi.bmi >= 25 ? 'Overweight' :
-                                bmi.bmi >= 18.5 ? 'Normal' : 'Underweight'
-                            }
-                            size="small"
-                            sx={{
-                                mt: 1.5,
-                                fontWeight: 600,
-                                bgcolor: bmi.bmi >= 30 ? '#fef2f2' : bmi.bmi >= 25 ? '#fffbeb' : '#f0fdf4',
-                                color: bmi.bmi >= 30 ? '#dc2626' : bmi.bmi >= 25 ? '#d97706' : '#16a34a',
-                                border: '1px solid',
-                                borderColor: bmi.bmi >= 30 ? '#fecaca' : bmi.bmi >= 25 ? '#fde68a' : '#bbf7d0',
-                            }}
-                        />
-                    </Box>
-                </>
-            )}
 
             <Divider sx={{ my: 3 }} />
 

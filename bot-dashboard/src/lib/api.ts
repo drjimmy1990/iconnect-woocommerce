@@ -70,8 +70,7 @@ export interface CrmClient {
   first_contact_date: string | null;
   last_contact_date: string | null;
   next_follow_up_date: string | null;
-  conversation_stage: 'first_contact' | 'bmi_collected' | 'testimonials_viewed' | 'price_viewed' | 'purchased' | null;
-  bmi_data: { weight: number; height: number; age: number; bmi: number } | null;
+  conversation_stage: 'first_contact' | 'browsing' | 'product_viewed' | 'order_placed' | 'purchased' | 'support' | null;
   created_at: string;
   updated_at: string;
 }

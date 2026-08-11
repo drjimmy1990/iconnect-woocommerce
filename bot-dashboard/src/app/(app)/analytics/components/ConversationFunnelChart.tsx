@@ -25,18 +25,18 @@ interface ConversationFunnelChartProps {
 
 const STAGE_LABELS: Record<string, string> = {
     'first_contact': 'First Contact',
-    'bmi_collected': 'BMI Collected',
-    'testimonials_viewed': 'Testimonials',
-    'price_viewed': 'Price Viewed',
+    'browsing': 'Browsing',
+    'product_viewed': 'Product Viewed',
+    'order_placed': 'Order Placed',
     'purchased': 'Purchased',
 };
 
 const STAGE_COLORS = [
-    '#667eea',  // first_contact — purple-blue
-    '#4facfe',  // bmi_collected — sky blue
-    '#38ef7d',  // testimonials_viewed — green
-    '#f5576c',  // price_viewed — coral
-    '#11998e',  // purchased — teal
+    '#94a3b8',  // first_contact — slate
+    '#667eea',  // browsing — purple-blue
+    '#4facfe',  // product_viewed — sky blue
+    '#f59e0b',  // order_placed — amber
+    '#38ef7d',  // purchased — green
 ];
 
 export default function ConversationFunnelChart({ data, isLoading, height = 400 }: ConversationFunnelChartProps) {

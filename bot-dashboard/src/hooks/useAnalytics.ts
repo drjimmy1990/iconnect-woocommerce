@@ -12,8 +12,8 @@ export interface DashboardSummary {
     total_revenue: number;
     avg_order_value: number;
     pending_activities: number;
-    bmi_collected_count: number;
-    price_viewed_count: number;
+    engaged_count: number;
+    order_placed_count: number;
 }
 
 export interface RevenueMetric {

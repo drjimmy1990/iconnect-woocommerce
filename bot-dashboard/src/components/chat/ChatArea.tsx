@@ -41,10 +41,11 @@ const CLIENT_TYPES: Record<string, { label: string; color: string; emoji: string
 
 const STAGE_CONFIG: Record<string, { label: string; emoji: string }> = {
   first_contact: { label: 'First Contact', emoji: '👋' },
-  bmi_collected: { label: 'BMI Collected', emoji: '📊' },
-  testimonials_viewed: { label: 'Testimonials', emoji: '⭐' },
-  price_viewed: { label: 'Price Viewed', emoji: '💰' },
-  purchased: { label: 'Purchased', emoji: '🎉' },
+  browsing: { label: 'Browsing', emoji: '🔍' },
+  product_viewed: { label: 'Product Viewed', emoji: '📦' },
+  order_placed: { label: 'Order Placed', emoji: '🛒' },
+  purchased: { label: 'Purchased', emoji: '✅' },
+  support: { label: 'Support', emoji: '🎧' },
 };
 
 interface ChatAreaProps {

@@ -40,10 +40,11 @@ const TYPE_OPTIONS = [
 
 const STAGE_OPTIONS = [
     { value: 'first_contact', label: '👋 First Contact' },
-    { value: 'bmi_collected', label: '📊 BMI Collected' },
-    { value: 'testimonials_viewed', label: '⭐ Testimonials' },
-    { value: 'price_viewed', label: '💰 Price Viewed' },
-    { value: 'purchased', label: '🎉 Purchased' },
+    { value: 'browsing', label: '🔍 Browsing' },
+    { value: 'product_viewed', label: '📦 Product Viewed' },
+    { value: 'order_placed', label: '🛒 Order Placed' },
+    { value: 'purchased', label: '✅ Purchased' },
+    { value: 'support', label: '🎧 Support' },
 ];
 
 export default function ClientFilters({

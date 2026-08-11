@@ -183,10 +183,11 @@ const columns: GridColDef<CrmClient>[] = [
       const stage = (params.row as any).conversation_stage || 'first_contact';
       const stageLabels: Record<string, { label: string; emoji: string }> = {
         first_contact: { label: 'First Contact', emoji: '👋' },
-        bmi_collected: { label: 'BMI Done', emoji: '📊' },
-        testimonials_viewed: { label: 'Testimonials', emoji: '⭐' },
-        price_viewed: { label: 'Price Viewed', emoji: '💰' },
+        browsing: { label: 'Browsing', emoji: '🔍' },
+        product_viewed: { label: 'Product Viewed', emoji: '📦' },
+        order_placed: { label: 'Order Placed', emoji: '🛒' },
         purchased: { label: 'Purchased', emoji: '✅' },
+        support: { label: 'Support', emoji: '🎧' },
       };
       const cfg = stageLabels[stage] || stageLabels.first_contact;
       return (
