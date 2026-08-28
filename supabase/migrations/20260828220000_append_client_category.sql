@@ -1,5 +1,6 @@
 -- Migration: append_client_category
 -- Purpose: Appends unique product categories to crm_clients.tags without duplicates
+--          and preserves existing client_type (e.g. customer stays customer) unless explicitly changed.
 
 CREATE OR REPLACE FUNCTION append_client_category(
   p_contact_id UUID,
@@ -17,10 +18,11 @@ BEGIN
       tags = ARRAY(
         SELECT DISTINCT unnest(COALESCE(tags, ARRAY[]::text[]) || ARRAY[TRIM(p_category)])
       ),
-      client_type = COALESCE(
-        NULLIF(TRIM(p_client_status), ''),
-        CASE WHEN client_type = 'new' THEN 'interested' ELSE client_type END
-      ),
+      client_type = CASE 
+        WHEN p_client_status IS NOT NULL AND TRIM(p_client_status) != '' THEN TRIM(p_client_status)
+        WHEN client_type = 'new' THEN 'interested'
+        ELSE client_type
+      END,
       updated_at = NOW()
     WHERE contact_id = p_contact_id;
   ELSE

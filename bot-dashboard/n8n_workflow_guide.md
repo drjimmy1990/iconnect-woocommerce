@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، مسار إنشاء الطلبات وحفظها في جدول `crm_orders`، مسار خدمة العملاء مع الإشعارات، وتراكم وحفظ الـ Tags في `crm_clients`) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، مسار إنشاء الطلبات وحفظها في جدول `crm_orders`، مسار خدمة العملاء مع الإشعارات، وتراكم وحفظ الـ Tags في `crm_clients` مع الحفاظ على حالة العميل) داخل منصة **n8n**.
 
 ---
 
@@ -12,7 +12,7 @@
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
 5. [الخطوة 5: مسار إنشاء الطلب وحفظه في الداشبورد (Order Creation Route)](#5-الخطوة-5-مسار-إنشاء-الطلب-وحفظه-في-الداشبورد-order_created) 🛒
 6. [الخطوة 6: مسار خدمة العملاء وإيقاف الرد الآلي (Customer Service & Escalation)](#6-الخطوة-6-مسار-خدمة-العملاء-وإيقاف-الرد-الآلي) 🚨
-7. [الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) في Supabase بالتفصيل](#7-الخطوة-7-حفظ-وتراكم-الكاتجوريز-tags-في-supabase-بالتفصيل) 🏷️
+7. [الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) عبر Supabase RPC دالة واحدة](#7-الخطوة-7-حفظ-وتراكم-الكاتجوريز-tags-عبر-supabase-rpc) 🏷️
 
 ---
 
@@ -45,11 +45,12 @@
 
 ## 3. الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)
 
-افتح عقدة **`Code in JavaScript2`** وتأكد من وجود الكود المحدث:
+افتح عقدة **`Code in JavaScript2`** والصق هذا الكود المحصن (يحافظ على حالة العميل ولا يعيدها لـ `new` عند المحادثات العادية):
 
 ```javascript
 // ============================================================================
 // Parse AI Agent Output — Ultra-Compact Schema
+// Automatically infers missing keys and maps client_status smartly
 // ============================================================================
 
 const VALID_INTENTS = [
@@ -95,12 +96,13 @@ function ok(intent, reply, extra = {}, parseNote = 'ok') {
       order: extra.order ?? null,
       detected_category: extra.detected_category ?? null,
       category: extra.detected_category ?? null,
-      client_status: extra.client_status ?? (extra.detected_category ? 'interested' : 'new'),
+      client_status: extra.client_status ?? null,
       _parse: parseNote,
     },
   }];
 }
 
+// 0. استلام مخرج الـ Agent
 const input = $input.first().json;
 const raw = input.output ?? input.text ?? input.response ?? '';
 
@@ -108,6 +110,7 @@ if (!raw || typeof raw !== 'string') {
   return ok('conversation', FALLBACK_REPLY, {}, 'no-output-field');
 }
 
+// 1. استخراج الـ JSON من Code Block أو أقواس {}
 let jsonString = null;
 const fence = raw.match(/```{3,}(?:json)?\s*([\s\S]*?)\s*```{3,}/);
 if (fence && fence[1]) jsonString = fence[1].trim();
@@ -122,6 +125,7 @@ if (!jsonString) {
   return ok('conversation', raw.trim(), {}, 'plain-text-fallback');
 }
 
+// 2. عمل Parse مع معالجة الأسطر الجديدة
 let parsed = null;
 try {
   parsed = JSON.parse(jsonString);
@@ -139,6 +143,7 @@ if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
   return ok('conversation', raw.trim(), {}, 'not-an-object');
 }
 
+// 3. تطبيع الحقول
 let intent = typeof parsed.intent === 'string' ? parsed.intent.trim() : '';
 let note = 'ok';
 
@@ -170,6 +175,7 @@ const order =
     ? parsed.order
     : null;
 
+// مطابقة الكاتجوري (يدعم category أو detected_category)
 const rawCategory = parsed.category ?? parsed.detected_category ?? null;
 let detectedCategory = null;
 if (typeof rawCategory === 'string' && rawCategory.trim()) {
@@ -178,17 +184,20 @@ if (typeof rawCategory === 'string' && rawCategory.trim()) {
   if (matched) detectedCategory = matched;
 }
 
-let clientStatus = 'new';
+// استنتاج حالة العميل تلقائياً فقط عند حدوث تغيير حقيقي، وإلا تظل null حتى لا نغير حالته الحالية
+let clientStatus = null;
 if (typeof parsed.client_status === 'string' && parsed.client_status.trim()) {
   const s = parsed.client_status.trim().toLowerCase();
   if (VALID_CLIENT_STATUSES.includes(s)) clientStatus = s;
 } else {
+  // الاستنتاج التلقائي فقط عند أحداث محددة
   if (detectedCategory || intent === 'product_details') clientStatus = 'interested';
   else if (intent === 'order_created') clientStatus = 'customer';
   else if (intent === 'complaint' || intent === 'customer_service') clientStatus = 'support';
-  else clientStatus = 'new';
+  else clientStatus = null; // يظل null في الكلام العادي والتحيات للحفاظ على حالة العميل الحالية في الداتابيز
 }
 
+// حراس الأمان (Guards)
 if (intent === 'product_details' && productId === null) {
   return ok('conversation', reply, { detected_category: detectedCategory, client_status: clientStatus }, 'product_details-without-product_id');
 }
@@ -308,64 +317,24 @@ flowchart LR
 
 ---
 
-## 7. الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) في Supabase بالتفصيل 🏷️
+## 7. الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) عبر Supabase RPC 🏷️
 
 في مسار الرد العادي (`conversation` و `product_details`)، بعد حفظ الرسالة في `messages` (`Create a row`):
 
-```mermaid
-flowchart LR
-    A["Create a row (حفظ رسالة الـ AI)"] --> B["1. Get CRM Client (Supabase: جلب الـ Tags السابقة)"]
-    B --> C["2. Merge Tags (Code: دمج الكاتجوري الجديد بدون تكرار)"]
-    C --> D["3. Update CRM Client Tags (Supabase: تحديث crm_clients)"]
-```
-
-### العقدة 1: جلب الـ Tags الحالية للعميل (`Get CRM Client`)
-* **Node Type:** `Supabase`
-* **Operation:** `Get an item`
-* **Table:** `crm_clients`
-* **Filter Conditions:**
-  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Always Output Data:** مفعل (`true`)
-
----
-
-### العقدة 2: كود دمج الكاتجوري بدون تكرار (`Merge Tags`)
-* **Node Type:** `Code` (JavaScript)
-* **Code:**
-```javascript
-// 1. جلب الـ Tags الحالية من Supabase
-const client = $input.first()?.json || {};
-const existingTags = Array.isArray(client.tags) ? client.tags : [];
-
-// 2. قراءة الكاتجوري والحالة الجديدة من مخرج الـ AI Agent
-const newCategory = $('Code in JavaScript2').item.json?.category || $('Code in JavaScript2').item.json?.detected_category;
-const newStatus = $('Code in JavaScript2').item.json?.client_status || (newCategory ? 'interested' : (client.client_type || 'new'));
-
-// 3. الدمج بدون تكرار
-let updatedTags = [...existingTags];
-if (newCategory && typeof newCategory === 'string' && !updatedTags.includes(newCategory)) {
-  updatedTags.push(newCategory);
-}
-
-return [{
-  json: {
-    client_id: client.id,
-    contact_id: $('Edit Fields4').item.json.contact_uuid,
-    updated_tags: updatedTags,
-    client_status: newStatus,
-    has_category: Boolean(newCategory)
+* **Node Name:** `HTTP Request10`
+* **Node Type:** `HTTP Request`
+* **Method:** `POST`
+* **URL:**
+  ```text
+  https://uorfbqhsaxoofzqouqsj.supabase.co/rest/v1/rpc/append_client_category
+  ```
+* **Authentication:** `Predefined Credential Type` $\rightarrow$ `Supabase API` $\rightarrow$ `Supabase account`
+* **Send Body:** `ON`
+* **Body (JSON):**
+  ```json
+  {
+    "p_contact_id": "={{ $('Edit Fields4').item.json.contact_uuid }}",
+    "p_category": "={{ $('Code in JavaScript2').item.json.category }}",
+    "p_client_status": "={{ $('Code in JavaScript2').item.json.client_status }}"
   }
-}];
-```
-
----
-
-### العقدة 3: حفظ البيانات المحدثة في الداشبورد (`Update CRM Client Tags`)
-* **Node Type:** `Supabase`
-* **Operation:** `Update`
-* **Table:** `crm_clients`
-* **Filter Conditions:**
-  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Fields to Update:**
-  * `client_type` = `={{ $json.client_status }}`
-  * `tags` = `={{ $json.updated_tags }}`
+  ```

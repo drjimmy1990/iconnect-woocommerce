@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Migration: 003_append_client_category
 -- Purpose: Appends unique product categories to crm_clients.tags without duplicates
---          and updates client_type lifecycle status seamlessly.
+--          and preserves existing client_type (e.g. customer stays customer) unless explicitly changed.
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION append_client_category(
@@ -21,14 +21,18 @@ BEGIN
       tags = ARRAY(
         SELECT DISTINCT unnest(COALESCE(tags, ARRAY[]::text[]) || ARRAY[TRIM(p_category)])
       ),
-      client_type = COALESCE(
-        NULLIF(TRIM(p_client_status), ''),
-        CASE WHEN client_type = 'new' THEN 'interested' ELSE client_type END
-      ),
+      client_type = CASE 
+        -- If an explicit status was passed, use it
+        WHEN p_client_status IS NOT NULL AND TRIM(p_client_status) != '' THEN TRIM(p_client_status)
+        -- Otherwise, if client was 'new', promote to 'interested'
+        WHEN client_type = 'new' THEN 'interested'
+        -- Otherwise, KEEP current status (e.g. customer remains customer!)
+        ELSE client_type
+      END,
       updated_at = NOW()
     WHERE contact_id = p_contact_id;
   ELSE
-    -- 2. If no category provided, only update client_type if a status is passed
+    -- 2. If no category provided, only update client_type if an explicit status is passed
     IF p_client_status IS NOT NULL AND TRIM(p_client_status) != '' THEN
       UPDATE crm_clients
       SET 
@@ -40,5 +44,5 @@ BEGIN
 END;
 $$;
 
--- Grant execution permissions to authenticated and service_role
+-- Grant execution permissions
 GRANT EXECUTE ON FUNCTION append_client_category(UUID, TEXT, TEXT) TO authenticated, service_role, anon;
