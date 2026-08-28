@@ -1,12 +1,12 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (Typing Indicator، تصنيف الكاتجوريز، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، تصنيف الكاتجوريز الـ 11، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
 
 ---
 
 ## 📑 فهرس الخطوات
 
-1. [الخطوة 1: إضافة مؤشر الكتابة (Typing Indicator) في n8n](#1-الخطوة-1-إضافة-مؤشر-الكتابة-typing-indicator)
+1. [الخطوة 1: إضافة مؤشر الكتابة (Typing Indicator) عبر Zernio أو Meta API](#1-الخطوة-1-إضافة-مؤشر-الكتابة-typing-indicator)
 2. [الخطوة 2: تحديث الـ System Prompt في عقدة AI Agent](#2-الخطوة-2-تحديث-الـ-system-prompt)
 3. [الخطوة 3: كود عقدة المعالجة (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-code-in-javascript2)
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
@@ -17,49 +17,55 @@
 
 ## 1. الخطوة 1: إضافة مؤشر الكتابة (Typing Indicator)
 
-الهدف من هذه العقدة هو إرسال إشعار فوري للعميل في واتساب أو إنستجرام بأن البوت **"يكتب الآن..."** بمجرد استقبال الرسالة، لكي لا يشعر العميل ببطء أثناء قيام الذكاء الاصطناعي بالبحث والمعالجة.
+الهدف من هذه العقدة هو إرسال إشعار فوري للعميل في إنستجرام/واتساب/ماسنجر بأن البوت **"يكتب الآن... / Typing..."** بمجرد استقبال الرسالة، لكي لا يشعر العميل ببطء أثناء قيام الذكاء الاصطناعي بالبحث والمعالجة وقراءة قواعد البيانات.
 
 ### 📍 أين تضع العقدة في الـ Canvas؟
-* ضع عقدة **`HTTP Request`** جديدة بعد عقدة التحقق من العميل (مثلاً بعد `Supabase7` أو `Code in JavaScript6`) **وقبل** إرسال الرسالة إلى عقدة `AI Agent`.
+* ضع عقدة **`HTTP Request`** جديدة بعد استلام الـ Webhook مباشرة (مثلاً بعد `Supabase7` أو `Code in JavaScript6`) **وقبل** إرسال الرسالة إلى عقدة `AI Agent`.
 
 ---
 
-### ⚙️ الإعدادات لمنصة Instagram / Facebook Graph API:
+### 🚀 الخيار الأول: عبر Zernio API (الرسمي الموصى به)
+
+يدعم Zernio مؤشر الكتابة لـ **Instagram** و **Facebook Messenger** و **WhatsApp** و **Telegram** عبر Endpoint موحد:
 
 * **Node Type:** `HTTP Request`
 * **Method:** `POST`
+* **URL:**
+  ```text
+  https://api.zernio.com/v1/inbox/conversations/{{ $json.conversationId || $json.conversation_id || $json.data?.conversationId }}/typing
+  ```
+* **Authentication / Headers:**
+  * `Authorization`: `Bearer YOUR_ZERNIO_API_KEY`
+  * `Content-Type`: `application/json`
+* **Body Parameters (JSON):**
+  ```json
+  {
+    "accountId": "={{ $json.accountId || $json.account_id || $json.data?.accountId }}"
+  }
+  ```
+
+> 📌 **مميزات Zernio Typing:**
+> * يظهر للعميل في Instagram و WhatsApp و Messenger فوراً.
+> * الـ Endpoint آمن (`best-effort`) ويعيد كود `200` مع `{ "success": true }` دون تعطيل الورك فلو في حال كان العميل غير متصل.
+
+---
+
+### 🌐 الخيار الثاني: عبر Meta / Instagram Graph API المباشر
+
+إذا كنت متصلاً بـ Meta Graph API مباشرة دون وسيط:
+
+* **Method:** `POST`
 * **URL:** `https://graph.facebook.com/v21.0/me/messages`
-* **Authentication:** `Generic Credential Type` $\rightarrow$ `Header Auth` (أو وضع الـ Token يدوياً في الـ Headers)
 * **Headers:**
   * `Authorization`: `Bearer YOUR_PAGE_ACCESS_TOKEN`
   * `Content-Type`: `application/json`
-* **Body Content Type:** `JSON`
-* **Specify Body:** `Using JSON`
-* **JSON:**
+* **JSON Body:**
 ```json
 {
   "recipient": {
     "id": "={{ $('Code in JavaScript6').item.json.SenderJid }}"
   },
   "sender_action": "typing_on"
-}
-```
-
----
-
-### ⚙️ الإعدادات لمنصة WhatsApp (Evolution API / Baileys / WPPConnect):
-
-* **Method:** `POST`
-* **URL:** `https://your-whatsapp-api.com/chat/sendPresence/YOUR_INSTANCE`
-* **Headers:**
-  * `apikey`: `YOUR_API_KEY`
-  * `Content-Type`: `application/json`
-* **JSON Body:**
-```json
-{
-  "number": "={{ $('Code in JavaScript6').item.json.SenderJid }}",
-  "presence": "composing",
-  "delay": 1200
 }
 ```
 
@@ -76,7 +82,7 @@
 > 💡 **أبرز ما تم تضمينه في الـ Prompt:**
 > * شجرة التصنيفات الـ 11 الرسمية (`detected_category`).
 > * الحالات الـ 6 الإلزامية للتحويل لخدمة العملاء (`shipping_delay`، `return_request`، `unlisted_spec`، `order_cancellation`، `complaint`، `human_request`).
-> * صيغة JSON منيعة من 7 حقول تمنع أخطاء الـ Parsing.
+> * صيغة JSON منيعة من 7 حقول تمنع أخطاء الـ Parsing وتضمن استقرار الردود.
 
 ---
 
@@ -260,7 +266,7 @@ return ok(intent, reply, {
 داخل عقدة **`Switch1`**، تأكد من وجود المسارات التالية:
 
 * **المسار 0 (Output 0):** `intent` يساوي `conversation`
-* **المسار 1 (Output 1):** `intent` يساوي `product_details` (لإرسال صور وتفاصيل المنتج)
+* **المسار 1 (Output 1):** `intent` يساوي `product_details` (لإرسال صور وتفاصيل المنتج تلقائياً)
 * **المسار 2 (Output 2):** `intent` يساوي `order_created` (لإرسال رابط الدفع وتأكيد الطلب)
 * **المسار 3 (Output 3):** `intent` يساوي `customer_service` أو `complaint` (لمسار التحويل البشري)
 
@@ -297,11 +303,11 @@ flowchart LR
   * `client_type` = `support`
 
 ### 3. إرسال رد الاعتذار/التحويل للعميل:
-* إرسال `reply` الناتج من الـ AI agent إلى العميل عبر واتساب/إنستجرام.
+* إرسال `reply` الناتج من الـ AI agent إلى العميل عبر إنستجرام/واتساب.
 
 ### 4. إرسال تنبيه للموظفين (Telegram / WhatsApp Alert):
 * محتوى التنبيه:
-  > 🚨 **تنبيه خدمة عملاء ومحادثة جديدة بحاجة لرد بشري**  
+  > 🚨 **تنبيه خدمة عملاء ومحادثة جديدة بحاجة لتدخل بشري**  
   > 👤 **العميل:** `{{ $('Code in JavaScript6').item.json.SenderName }}`  
   > 📱 **الرقم/المعرف:** `{{ $('Code in JavaScript6').item.json.SenderJid }}`  
   > 📝 **السبب:** `{{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف / استفسار خاص' }}`
@@ -312,8 +318,7 @@ flowchart LR
 
 لتسجيل كاتجوري اهتمام العميل تلقائياً في `crm_clients.tags`:
 
-* في مسار الرد العادي، أضف عقدة **`Supabase`** (أو كود Node):
-* **Table:** `crm_clients`
+* في مسار الرد العادي، أضف عقدة **`Supabase`** (نوع `Update` على جدول `crm_clients`):
 * **Filter:** `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
 * **Fields to Update:**
   * `client_type` = `={{ $('Code in JavaScript2').item.json.client_status }}`
