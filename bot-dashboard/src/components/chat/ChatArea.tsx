@@ -1,16 +1,21 @@
 // src/components/chat/ChatArea.tsx
+'use client';
+
 import React, { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, CircularProgress, IconButton, Tooltip, Alert, Snackbar,
-  Chip, Menu, MenuItem, alpha, Stack, FormControlLabel, Switch,
+  Chip, Menu, MenuItem, alpha, Stack, FormControlLabel, Switch, ListItemIcon, ListItemText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatIcon from '@mui/icons-material/Chat';
 import PersonIcon from '@mui/icons-material/Person';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import AddIcon from '@mui/icons-material/Add';
+import CheckIcon from '@mui/icons-material/Check';
 import { Contact, Message, toggleFollowupStatus } from '@/lib/api';
+import { CLIENT_STATUS_CONFIG, PRODUCT_CATEGORIES, getCategoryMeta } from '@/lib/categories';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -29,23 +34,6 @@ type ContactWithClient = Contact & {
     lead_quality: string | null;
   } | null;
   channels: { platform_channel_id: string } | null;
-}
-
-const CLIENT_TYPES: Record<string, { label: string; color: string; emoji: string }> = {
-  new: { label: 'New', color: '#94a3b8', emoji: '🆕' },
-  interested: { label: 'Interested', color: '#3b82f6', emoji: '👀' },
-  customer: { label: 'Customer', color: '#22c55e', emoji: '✅' },
-  repeat_customer: { label: 'Repeat', color: '#8b5cf6', emoji: '🔄' },
-  inactive: { label: 'Inactive', color: '#ef4444', emoji: '💤' },
-};
-
-const STAGE_CONFIG: Record<string, { label: string; emoji: string }> = {
-  first_contact: { label: 'First Contact', emoji: '👋' },
-  browsing: { label: 'Browsing', emoji: '🔍' },
-  product_viewed: { label: 'Product Viewed', emoji: '📦' },
-  order_placed: { label: 'Order Placed', emoji: '🛒' },
-  purchased: { label: 'Purchased', emoji: '✅' },
-  support: { label: 'Support', emoji: '🎧' },
 };
 
 interface ChatAreaProps {
@@ -103,8 +91,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const resolvedPlatformChannelId = activeChannel?.platform_channel_id || null;
 
   const queryClient = useQueryClient();
-  const [typeMenuAnchor, setTypeMenuAnchor] = useState<null | HTMLElement>(null);
-  const [stageMenuAnchor, setStageMenuAnchor] = useState<null | HTMLElement>(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  const [tagMenuAnchor, setTagMenuAnchor] = useState<null | HTMLElement>(null);
 
   const { data: contact, isLoading: isLoadingContact } = useQuery<ContactWithClient>({
     queryKey: ['contact-details', contactId],
@@ -117,7 +105,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       if (directError) throw new Error(directError.message);
 
-      // The result of a single() join is an object, not an array.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const crmRaw = directData.crm_clients as any;
       const reshapedData = {
@@ -185,6 +172,61 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     }
   };
 
+  // Status update handler
+  const handleUpdateStatus = async (newStatus: string) => {
+    setStatusMenuAnchor(null);
+    if (!contact?.crm_clients?.id) return;
+    const { error } = await supabase
+      .from('crm_clients')
+      .update({ client_type: newStatus })
+      .eq('id', contact.crm_clients.id);
+
+    if (error) {
+      setSnackbar({ open: true, message: 'Failed to update status', severity: 'error' });
+    } else {
+      const label = CLIENT_STATUS_CONFIG[newStatus]?.label || newStatus;
+      setSnackbar({ open: true, message: `Status updated to ${label}`, severity: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+    }
+  };
+
+  // Tag add/remove handlers
+  const handleToggleTag = async (tagName: string) => {
+    setTagMenuAnchor(null);
+    if (!contact?.crm_clients?.id) return;
+    const currentTags: string[] = contact.crm_clients.tags || [];
+    const exists = currentTags.includes(tagName);
+    const updatedTags = exists ? currentTags.filter((t) => t !== tagName) : [...currentTags, tagName];
+
+    const { error } = await supabase
+      .from('crm_clients')
+      .update({ tags: updatedTags })
+      .eq('id', contact.crm_clients.id);
+
+    if (error) {
+      setSnackbar({ open: true, message: 'Failed to update tags', severity: 'error' });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    if (!contact?.crm_clients?.id) return;
+    const currentTags: string[] = contact.crm_clients.tags || [];
+    const updatedTags = currentTags.filter((t) => t !== tagToRemove);
+
+    const { error } = await supabase
+      .from('crm_clients')
+      .update({ tags: updatedTags })
+      .eq('id', contact.crm_clients.id);
+
+    if (error) {
+      setSnackbar({ open: true, message: 'Failed to remove tag', severity: 'error' });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+    }
+  };
+
   // File upload handler
   const handleFileUpload = async (file: File) => {
     if (!contact) return;
@@ -220,7 +262,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     if (!blob) return;
 
     try {
-      // Create a File from the Blob — recorder outputs WAV
       const extension = blob.type.includes('wav') ? 'wav' : blob.type.includes('webm') ? 'webm' : blob.type.includes('mp4') ? 'm4a' : 'wav';
       const fileName = `voice_${Date.now()}.${extension}`;
       const file = new File([blob], fileName, { type: blob.type });
@@ -265,58 +306,38 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!contact) return <Alert severity="error">Could not load contact details.</Alert>;
 
+  const currentStatusKey = contact.crm_clients?.client_type || 'new';
+  const statusCfg = CLIENT_STATUS_CONFIG[currentStatusKey] || CLIENT_STATUS_CONFIG.new;
+  const currentTags = contact.crm_clients?.tags || [];
+
   return (
     <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-        {/* Row 1: Name + Actions */}
+      <Box sx={{ px: 2, py: 1.2, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+        {/* Row 1: Name + Unified Status + Actions */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1rem' }}>
               {contact.name || 'Unknown Contact'}
             </Typography>
 
-            {/* Client Type Chip — clickable to change */}
-            {contact.crm_clients && (() => {
-              const ct = CLIENT_TYPES[contact.crm_clients.client_type] || CLIENT_TYPES.new;
-              return (
-                <Chip
-                  label={`${ct.emoji} ${ct.label}`}
-                  size="small"
-                  onClick={(e) => setTypeMenuAnchor(e.currentTarget)}
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: '0.7rem',
-                    height: 24,
-                    bgcolor: alpha(ct.color, 0.12),
-                    color: ct.color,
-                    border: `1px solid ${alpha(ct.color, 0.3)}`,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: alpha(ct.color, 0.2) },
-                  }}
-                />
-              );
-            })()}
-
-            {/* Stage chip — clickable to change */}
-            {contact.crm_clients && (() => {
-              const stageKey = contact.crm_clients.conversation_stage || 'first_contact';
-              const st = STAGE_CONFIG[stageKey] || STAGE_CONFIG.first_contact;
-              return (
-                <Chip
-                  label={`${st.emoji} ${st.label}`}
-                  size="small"
-                  variant="outlined"
-                  onClick={(e) => setStageMenuAnchor(e.currentTarget)}
-                  sx={{
-                    fontWeight: 500,
-                    fontSize: '0.7rem',
-                    height: 24,
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                />
-              );
-            })()}
+            {/* Single Unified Client Status Chip */}
+            {contact.crm_clients && (
+              <Chip
+                label={`${statusCfg.emoji} ${statusCfg.label}`}
+                size="small"
+                onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  height: 26,
+                  bgcolor: alpha(statusCfg.color, 0.12),
+                  color: statusCfg.color,
+                  border: `1px solid ${alpha(statusCfg.color, 0.35)}`,
+                  cursor: 'pointer',
+                  '&:hover': { bgcolor: alpha(statusCfg.color, 0.22) },
+                }}
+              />
+            )}
           </Box>
 
           <Stack direction="row" spacing={0} alignItems="center">
@@ -353,8 +374,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </Stack>
         </Box>
 
-        {/* Row 2: Metadata */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+        {/* Row 2: Metadata & Category Interest Tags */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mt: 0.75 }}>
           <Typography variant="caption" color="text.secondary">
             {contact.platform_user_id}
           </Typography>
@@ -363,80 +384,112 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <PhoneIcon sx={{ fontSize: 12 }} /> {contact.crm_clients.phone}
             </Typography>
           )}
-          {contact.crm_clients?.tags && contact.crm_clients.tags.length > 0 && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <LocalOfferIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
-              {contact.crm_clients.tags.slice(0, 3).map((tag) => (
-                <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 18 }} />
-              ))}
-            </Box>
-          )}
+
+          {/* Product Category & Interest Tags */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.6 }}>
+            <LocalOfferIcon sx={{ fontSize: 13, color: 'text.disabled', ml: 0.5 }} />
+            {currentTags.map((tag) => {
+              const catMeta = getCategoryMeta(tag);
+              return (
+                <Chip
+                  key={tag}
+                  label={catMeta ? `${catMeta.emoji} ${catMeta.name}` : tag}
+                  size="small"
+                  onDelete={() => handleRemoveTag(tag)}
+                  sx={{
+                    fontSize: '0.7rem',
+                    height: 22,
+                    fontWeight: 500,
+                    bgcolor: catMeta ? alpha(catMeta.color, 0.1) : 'action.hover',
+                    color: catMeta ? catMeta.color : 'text.primary',
+                    border: `1px solid ${catMeta ? alpha(catMeta.color, 0.3) : 'divider'}`,
+                    '& .MuiChip-deleteIcon': {
+                      fontSize: 14,
+                      color: catMeta ? catMeta.color : 'text.secondary',
+                      '&:hover': { color: 'error.main' },
+                    },
+                  }}
+                />
+              );
+            })}
+
+            {/* Add Category / Tag Button */}
+            <Chip
+              icon={<AddIcon sx={{ fontSize: '13px !important' }} />}
+              label="Add Category"
+              size="small"
+              variant="outlined"
+              onClick={(e) => setTagMenuAnchor(e.currentTarget)}
+              sx={{
+                fontSize: '0.68rem',
+                height: 22,
+                cursor: 'pointer',
+                borderStyle: 'dashed',
+                color: 'text.secondary',
+                '&:hover': { bgcolor: 'action.hover', color: 'primary.main', borderColor: 'primary.main' },
+              }}
+            />
+          </Box>
         </Box>
       </Box>
 
-      {/* Client Type Change Menu */}
+      {/* Unified Status Change Menu */}
       <Menu
-        anchorEl={typeMenuAnchor}
-        open={Boolean(typeMenuAnchor)}
-        onClose={() => setTypeMenuAnchor(null)}
+        anchorEl={statusMenuAnchor}
+        open={Boolean(statusMenuAnchor)}
+        onClose={() => setStatusMenuAnchor(null)}
       >
-        {Object.entries(CLIENT_TYPES).map(([key, cfg]) => (
+        {Object.entries(CLIENT_STATUS_CONFIG).map(([key, cfg]) => (
           <MenuItem
             key={key}
-            selected={contact.crm_clients?.client_type === key}
-            onClick={async () => {
-              setTypeMenuAnchor(null);
-              if (!contact.crm_clients?.id) return;
-              const { error } = await supabase
-                .from('crm_clients')
-                .update({ client_type: key })
-                .eq('id', contact.crm_clients.id);
-              if (error) {
-                setSnackbar({ open: true, message: 'Failed to update', severity: 'error' });
-              } else {
-                setSnackbar({ open: true, message: `Type changed to ${cfg.label}`, severity: 'success' });
-                queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
-              }
-            }}
-            sx={{ fontSize: '0.85rem' }}
+            selected={currentStatusKey === key}
+            onClick={() => handleUpdateStatus(key)}
+            sx={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 1 }}
           >
-            {cfg.emoji} {cfg.label}
+            <span>{cfg.emoji}</span>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: currentStatusKey === key ? 700 : 400 }}>
+                {cfg.label}
+              </Typography>
+            </Box>
           </MenuItem>
         ))}
       </Menu>
 
-      {/* Stage Change Menu */}
+      {/* Product Categories / Tags Menu */}
       <Menu
-        anchorEl={stageMenuAnchor}
-        open={Boolean(stageMenuAnchor)}
-        onClose={() => setStageMenuAnchor(null)}
+        anchorEl={tagMenuAnchor}
+        open={Boolean(tagMenuAnchor)}
+        onClose={() => setTagMenuAnchor(null)}
+        PaperProps={{ sx: { maxHeight: 360, width: 280 } }}
       >
-        {Object.entries(STAGE_CONFIG).map(([key, cfg]) => (
-          <MenuItem
-            key={key}
-            selected={contact.crm_clients?.conversation_stage === key}
-            onClick={async () => {
-              setStageMenuAnchor(null);
-              if (!contact.crm_clients?.id) return;
-              const { error } = await supabase
-                .from('crm_clients')
-                .update({ conversation_stage: key })
-                .eq('id', contact.crm_clients.id);
-              if (error) {
-                setSnackbar({ open: true, message: 'Failed to update', severity: 'error' });
-              } else {
-                setSnackbar({ open: true, message: `Stage changed to ${cfg.label}`, severity: 'success' });
-                queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
-              }
-            }}
-            sx={{ fontSize: '0.85rem' }}
-          >
-            {cfg.emoji} {cfg.label}
-          </MenuItem>
-        ))}
+        <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 600 }}>
+          Select Product Categories:
+        </Typography>
+        {PRODUCT_CATEGORIES.map((cat) => {
+          const isSelected = currentTags.includes(cat.id);
+          return (
+            <MenuItem
+              key={cat.id}
+              onClick={() => handleToggleTag(cat.id)}
+              sx={{ fontSize: '0.82rem', py: 0.8 }}
+            >
+              <ListItemIcon sx={{ minWidth: 28 }}>
+                {cat.emoji}
+              </ListItemIcon>
+              <ListItemText
+                primary={cat.name}
+                secondary={cat.nameAr}
+                primaryTypographyProps={{ fontSize: '0.8rem', fontWeight: isSelected ? 700 : 400 }}
+                secondaryTypographyProps={{ fontSize: '0.7rem' }}
+              />
+              {isSelected && <CheckIcon fontSize="small" color="primary" />}
+            </MenuItem>
+          );
+        })}
       </Menu>
 
-      <Box ref={scrollableContainerRef} sx={{ flexGrow: 1, overflowY: 'auto', p: 3, }} className="chat-background" >
+      <Box ref={scrollableContainerRef} sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }} className="chat-background">
         {isLoadingMessages ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
         ) : (
@@ -469,11 +522,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           variant="filled"
           sx={{ width: '100%' }}

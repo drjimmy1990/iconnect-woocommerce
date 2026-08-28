@@ -1,0 +1,3238 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fa076af2-cd05-47bf-96a5-a64531d1faad",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        48
+      ],
+      "id": "6904e1ef-fd57-40ff-a509-d34ed9bc06dd",
+      "name": "Webhook",
+      "webhookId": "fa076af2-cd05-47bf-96a5-a64531d1faad"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b3b22bac-19c4-4913-bf5c-d9e84e40c196",
+              "leftValue": "={{ $json.body.message.direction }}",
+              "rightValue": "=outgoing",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "8d81cc1f-151b-4337-aaea-c5514a467142",
+              "leftValue": "={{ $json.body.message.sender_type }}",
+              "rightValue": "agent",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        16
+      ],
+      "id": "512cbe43-9d6a-4d0f-b705-7bc93efa639e",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "aeac3c74-e9a6-485c-88e3-0a596de0bc05",
+              "leftValue": "={{ $json.body.account.id }}",
+              "rightValue": "6a7875b4d0fe733d1a7b977b",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        272,
+        48
+      ],
+      "id": "684ba2a8-7595-4483-a994-c03bb3022723",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all incoming items\nfor (const item of items) {\n  const body = item.json.body || {};\n  const message = body.message || {};\n  const sender = message.sender || {};\n  const conversation = body.conversation || {};\n  const account = body.account || {};\n\n  // 1. Instagram: use participantId as unique identifier (no phone number)\n  const participantId = conversation.participantId || conversation.platformConversationId || '';\n  const senderJid = participantId; // Raw Instagram ID, e.g. \"1322499536539094\"\n\n  // 2. Sender display name (the customer)\n  const senderName = conversation.participantName || '';\n\n  // 3. Timestamp — ISO 8601 string, offset to UTC+3\n  let formattedTime = '';\n  const rawTimestamp = message.sentAt || body.timestamp || '';\n  if (rawTimestamp) {\n    const date = new Date(rawTimestamp);\n    const utc3Date = new Date(date.getTime() + 10800000);\n    formattedTime = utc3Date.toISOString().replace('T', ' ').replace('Z', '');\n  }\n\n  // 4. Message type\n  let msgType = 'text';\n  if (message.attachments && message.attachments.length > 0) {\n    msgType = message.attachments[0].type || 'media';\n  }\n\n  // 5. Media (first attachment URL if any)\n  const media = (message.attachments && message.attachments.length > 0)\n    ? (message.attachments[0].url || null)\n    : null;\n\n  // 6. Output\n  item.json = {\n    SenderJid:      senderJid,\n    SenderName:     senderName,\n    Timestamp:      formattedTime,\n    MsgType:        msgType,\n    Msg:            message.text || '',\n    Media:          media,\n    Instance:       account.displayName || account.username || '',\n    Key:            body.id || '',\n    phonenumber:    '',              // Instagram has no phone number\n    ConversationId: message.conversationId || conversation.id || '',\n    Direction:      message.direction || '',\n    Event:          body.event || '',\n    AccountId:      account.id || account.accountId || '',\n    MessageId:      message.id || ''   // ← \"6a4a5e6f9d9472faae8534e6\"\n  };\n\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        48
+      ],
+      "id": "4e9dd82b-b1de-48cc-a2ad-1c5114a83c19",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "url": "https://uorfbqhsaxoofzqouqsj.supabase.co/rest/v1/channels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "=*,channel_configurations(*),agent_prompts(*),keyword_actions(*),content_collections(*)"
+            },
+            {
+              "name": "platform_channel_id",
+              "value": "=eq.{{ $json.AccountId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1600,
+        96
+      ],
+      "id": "a0d31a9b-1ac2-4866-a029-631bebf314a2",
+      "name": "HTTP Request",
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "738d08ff-866b-42b0-bc7a-04540c79ade2",
+              "leftValue": "={{ $json.is_active }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2912,
+        -352
+      ],
+      "id": "d34257d5-fdfe-46bb-a9c2-ed1382a585f0",
+      "name": "If16"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4208,
+        496
+      ],
+      "id": "0257a031-8af1-413e-ade1-944503939ee7",
+      "name": "No Operation, do nothing4"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "77810f3d-d593-4e3f-bf6d-455311c63ba6",
+                    "leftValue": "={{ $('Code in JavaScript6').item.json.MsgType }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Code in JavaScript6').item.json.MsgType }}",
+                    "rightValue": "=audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0d089893-195d-4738-aaa8-fec6a72ff757"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fbb513ed-b191-4526-9127-7410f2d04cdd",
+                    "leftValue": "={{ $('Code in JavaScript6').item.json.MsgType }}",
+                    "rightValue": "imageMessage",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        8144,
+        -752
+      ],
+      "id": "97d427d1-1854-452b-a69e-5f4f6daca670",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "contacts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "platform_user_id",
+              "keyValue": "={{ $('Code in JavaScript6').item.json.SenderJid }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4480,
+        -208
+      ],
+      "id": "a58c1690-3da4-4311-a2d0-c0c05bd6791e",
+      "name": "Supabase7",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "contacts",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "platform",
+              "fieldValue": "={{ $('HTTP Request').item.json.platform }}"
+            },
+            {
+              "fieldId": "platform_user_id",
+              "fieldValue": "={{ $('Code in JavaScript6').item.json.SenderJid }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('HTTP Request').item.json.organization_id }}"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('HTTP Request').item.json.channel_configurations.channel_id }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Code in JavaScript6').item.json.SenderName }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        6672,
+        -736
+      ],
+      "id": "6f73cd37-2173-457f-a092-4d130081c32c",
+      "name": "Supabase8",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2be1936-4832-4628-b97a-80d0573e3091",
+              "name": "contact_uuid",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f79e3551-5df7-41ad-978e-185cf81894e1",
+              "name": "ai_enabled",
+              "value": "={{ $json.ai_enabled }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7952,
+        -672
+      ],
+      "id": "80515dd3-40d9-4a97-8255-08d9742109bf",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "={{ $('Code in JavaScript6').item.json.MsgType }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "text_content",
+              "fieldValue": "={{ $('Edit Fields12').item.json.original_message_text }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.message_platform_id }}"
+            },
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $json.contact_uuid }}"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ $('Edit Fields12').item.json.message_platform_timestamp }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        8544,
+        -1280
+      ],
+      "id": "6adec1db-b399-414c-bab5-9103003513df",
+      "name": "Supabase1",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0260ed58-c70f-41bc-a3fd-f6edf4690066",
+              "leftValue": "={{ $('Supabase7').item.json.name }}",
+              "rightValue": "={{ $('Code in JavaScript6').item.json.SenderName }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5440,
+        64
+      ],
+      "id": "78dc7d85-6b3f-4469-ba79-cc2e634e4f45",
+      "name": "If12"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "contacts",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Supabase7').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        7216,
+        32
+      ],
+      "id": "89ea5aa5-1d93-4633-8640-be37c12325ae",
+      "name": "Supabase15",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "224b43da-7acf-424a-9a11-51cc6b5eb7bc",
+              "name": "id",
+              "value": "={{ $('Supabase7').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "206f369b-3e2e-4cf6-8580-b68d03fabb9d",
+              "name": "ai_enabled",
+              "value": "={{ $('Supabase7').item.json.ai_enabled }}",
+              "type": "string"
+            },
+            {
+              "id": "7ae099f3-fcfb-4d23-9e2b-b99e4c95d8b0",
+              "name": "name",
+              "value": "={{ $('Code in JavaScript6').item.json.SenderName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7232,
+        -432
+      ],
+      "id": "4ca451fd-1d98-4957-84b3-7824eefab1de",
+      "name": "Edit Fields13"
+    },
+    {
+      "parameters": {
+        "tableId": "queue",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sender_id",
+              "fieldValue": "={{ $('Edit Fields12').first().json.platform_user_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $('Edit Fields12').first().json.original_message_text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        9600,
+        -1280
+      ],
+      "id": "0ab26b2c-57dd-4e0e-8a66-cdaa60d5bb06",
+      "name": "Supabase3",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields12').item.json.platform_user_id }}",
+        "tableName": "ilipofitnstagram2",
+        "contextWindowLength": 100
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        12608,
+        176
+      ],
+      "id": "714ca027-5735-4883-8f0c-41cf75a6fde5",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "UbqmlgeZim8ab5pz",
+          "name": "Postgres account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        10272,
+        -272
+      ],
+      "id": "9345495b-f601-4ba4-8ce5-04098e81e0d7",
+      "name": "No Operation, do nothing3",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.attachment_url_for_dashboard }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8736,
+        -944
+      ],
+      "id": "bdf9e948-ef81-4235-9b0a-f23c26e86848",
+      "name": "download audio",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.attachment_url_for_dashboard }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9008,
+        -592
+      ],
+      "id": "e7532734-f985-4d52-86be-095e928abdb7",
+      "name": "download image",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Your task is to act as a strict JSON API. You must respond ONLY with a single, valid JSON object and no other text or explanations.\n\nThe required JSON structure is: \n{ \n  \"description\": \"<value>\" \n}\n\nFollow these rules to determine the <value>:\n\n1.  Analyze the provided image.\n2.  IF the image is a 'like' symbol, a thumbs-up gesture, or matches the description 'صورة لإشارة الإعجاب (أو \\\"لايك\\\") باللون الأزرق. الإشارة عبارة عن يد مرفوعة مع الإبهام متجه للأعلى', then the value for the \"description\" key MUST be the single English word: \"like\".\n3.  FOR ANY OTHER IMAGE, the value for the \"description\" key MUST be a detailed description in Arabic that begins with the exact phrase: \"ارسل العميل صوره و هذه وصفها : \"\n\nGenerate the JSON response now.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        9232,
+        -688
+      ],
+      "id": "b54bab3d-772a-4efb-bd11-49fb2314f961",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $('Edit Fields15').item.json.id }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.message_platform_id }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "={{ $('download audio').item.json.content_type }}"
+            },
+            {
+              "fieldId": "attachment_url",
+              "fieldValue": "={{ $('Edit Fields15').item.json.attachment_url_for_dashboard }}"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ $('download audio').item.json.message_platform_timestamp }}"
+            },
+            {
+              "fieldId": "text_content",
+              "fieldValue": "={{ $json.candidates[0].content.parts[0].text }}"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        9664,
+        -928
+      ],
+      "id": "193937d1-0f5d-4bd6-9f77-401b7a33ff64",
+      "name": "Supabase14",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over all items\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  \n  // 'data' is the name of your binary property (from your screenshot)\n  // We read the file buffer from n8n's internal storage\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');\n  \n  // Convert the buffer to a Base64 string and save it to a new JSON field\n  item.json.audioBase64 = buffer.toString('base64');\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8992,
+        -960
+      ],
+      "id": "d37d9623-d452-4919-906d-18e13e3c812c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "tableId": "queue",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sender_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.platform_user_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $json.text_content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        9968,
+        -640
+      ],
+      "id": "37432cb3-e0ec-4cdd-9a70-5bdf971a2b32",
+      "name": "Supabase5",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "tableId": "queue",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sender_id",
+              "fieldValue": "={{ $('Edit Fields12').first().json.platform_user_id }}"
+            },
+            {
+              "fieldId": "message",
+              "fieldValue": "={{ $('transcribe').item.json.candidates[0].content.parts[0].text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        9872,
+        -928
+      ],
+      "id": "655b4f22-3315-439c-9635-09bce9118e2e",
+      "name": "Supabase6",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e97c3ba4-f6a3-4961-963f-b4b31ec4e4bd",
+              "name": "content_type",
+              "value": "image",
+              "type": "string"
+            },
+            {
+              "id": "194528e2-cc1e-47f7-9154-59eb8b804b9f",
+              "name": "message_text_for_dashboard",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "e8020b66-89d4-4f12-9168-f31b74e24f90",
+              "name": "attachment_url_for_dashboard",
+              "value": "={{ $('Edit Fields12').item.json.original_attachments }}",
+              "type": "string"
+            },
+            {
+              "id": "98374319-0fcb-4f7a-9813-41fe2bd7861d",
+              "name": "message_for_queue",
+              "value": "[Image Description Pending]",
+              "type": "string"
+            },
+            {
+              "id": "295b7839-8684-4349-bae1-6ff210dbaa5c",
+              "name": "contact_uuid",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "10669db8-8b5e-4598-bc0a-0d44021eed28",
+              "name": "platform_user_id",
+              "value": "={{ $('Edit Fields12').item.json.platform_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "116e103a-54d9-454a-9557-9e44eb509fd6",
+              "name": "message_platform_id",
+              "value": "={{ $('Edit Fields12').item.json.message_platform_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8624,
+        -592
+      ],
+      "id": "048c5a6f-a361-4a53-9715-e783d468102f",
+      "name": "Edit Fields14",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5d74ba8-defa-48cf-9953-c15a47481b3b",
+              "name": "content_type",
+              "value": "audio",
+              "type": "string"
+            },
+            {
+              "id": "ffc48e85-b4e9-49e3-9479-cfd20585677a",
+              "name": "message_text_for_dashboard",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "bcb54c25-bd65-4af1-95cc-9a01ec93d526",
+              "name": "attachment_url_for_dashboard",
+              "value": "={{ $('Edit Fields12').item.json.original_attachments }}",
+              "type": "string"
+            },
+            {
+              "id": "c330ba2d-9196-4ec2-8055-2f7a7db5cfbc",
+              "name": "message_for_queue",
+              "value": "[Audio Transcription Pending]",
+              "type": "string"
+            },
+            {
+              "id": "f49bfc30-8849-45e6-b0e1-438aacfe7d85",
+              "name": "contact_uuid",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "3e7140e5-6274-4a4e-b009-5adffd50bf63",
+              "name": "platform_user_id",
+              "value": "={{ $('Edit Fields12').item.json.platform_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f6179c8c-d0d3-4d64-ad17-1824ff6b67ee",
+              "name": "message_platform_id",
+              "value": "={{ $('Edit Fields12').item.json.message_platform_id }}",
+              "type": "string"
+            },
+            {
+              "id": "e724e33e-5c1c-4465-a388-84fe709f6fb9",
+              "name": "message_platform_timestamp",
+              "value": "={{ $('Edit Fields12').item.json.message_platform_timestamp }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8544,
+        -944
+      ],
+      "id": "a9709822-5654-4c98-8778-2a5d0294a45a",
+      "name": "Edit Fields15"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $('Edit Fields14').item.json.contact_uuid }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.message_platform_id }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "={{ $('Edit Fields14').item.json.content_type }}"
+            },
+            {
+              "fieldId": "attachment_url",
+              "fieldValue": "={{ $('Edit Fields14').item.json.attachment_url_for_dashboard }}"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ $('Edit Fields12').item.json.message_platform_timestamp }}"
+            },
+            {
+              "fieldId": "text_content",
+              "fieldValue": "={{ $json.output.description }}"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        9616,
+        -640
+      ],
+      "id": "62d722c4-0cc9-4603-90dc-8d341d3708d9",
+      "name": "Supabase17",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        9200,
+        -464
+      ],
+      "id": "e3e05166-b7a7-4b72-84c6-6360759e0957",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pCxP1eZimKMyTpal",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \n  \"description\": \"<value>\" \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        9552,
+        -464
+      ],
+      "id": "60c9b09d-0512-49dc-8a4f-9ab45ce2e416",
+      "name": "Structured Output Parser2",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        9360,
+        -448
+      ],
+      "id": "8f968505-5429-480d-a1b4-d1f016e7937e",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "10X6P4UZOSf6ky38",
+          "name": "OpenAI account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fbb0865c-0de9-4cf5-a721-d564100788d9",
+              "leftValue": "={{ $('HTTP Request').item.json.channel_configurations.is_bot_active }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        10400,
+        -608
+      ],
+      "id": "e71ea2ed-bf5e-4e53-815f-434c9a016ba2",
+      "name": "If14"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5484e68b-7fb5-4d24-9df7-d34c575fc807",
+              "leftValue": "={{ $('Supabase7').item.json.isEmpty()}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4976,
+        -240
+      ],
+      "id": "e8506405-99be-4c08-b6f5-ec915bd1f262",
+      "name": "If18"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c86bf29f-9e54-4e65-9af9-907ab839099d",
+              "name": "platform_user_id",
+              "value": "={{ $('Code in JavaScript6').item.json.SenderJid }}",
+              "type": "string"
+            },
+            {
+              "id": "efe8efcc-d789-4e62-be6c-3f17d7cff4a0",
+              "name": "message_platform_id",
+              "value": "={{ $('Webhook').item.json.body.message.id }}",
+              "type": "string"
+            },
+            {
+              "id": "8cfa1a7b-994b-421b-9c11-0a053f015829",
+              "name": "message_platform_timestamp",
+              "value": "={{ DateTime.fromMillis(parseInt($('Code in JavaScript6').item.json.Timestamp)).toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "af0fe570-096e-46ab-8d34-0557987650a8",
+              "name": "user_name",
+              "value": "(Placeholder)",
+              "type": "string"
+            },
+            {
+              "id": "19ede155-a2da-4449-bca4-2967e29a3ad5",
+              "name": "user_avatar_url",
+              "value": "(Placeholder)",
+              "type": "string"
+            },
+            {
+              "id": "30a9ae2a-b070-4749-89d0-605c20ba7300",
+              "name": "original_message_text",
+              "value": "={{ $('Code in JavaScript6').item.json.Msg }}",
+              "type": "string"
+            },
+            {
+              "id": "f433718e-dfe9-4e08-af3d-dc896fbf8804",
+              "name": "original_attachments",
+              "value": "={{ $('Code in JavaScript6').item.json.Media }}",
+              "type": "string"
+            },
+            {
+              "id": "3640ec13-3f58-4a73-919d-0330146c9cc8",
+              "name": "platform",
+              "value": "={{ $json.platform }}",
+              "type": "string"
+            },
+            {
+              "id": "863cf533-1a6d-4e55-a4dc-de42f3871359",
+              "name": "platform_channel_id",
+              "value": "={{ $json.platform_channel_id }}",
+              "type": "string"
+            },
+            {
+              "id": "64f9f8c3-bd01-4aa3-829c-7dd0238e1b1b",
+              "name": "organization_id",
+              "value": "={{ $json.organization_id }}",
+              "type": "string"
+            },
+            {
+              "id": "5b02575a-e568-4f30-9e45-22a63eb849cb",
+              "name": "channel_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "88089840-7568-433d-81af-24a954930272",
+              "name": "is_active",
+              "value": "={{ $json.is_active }}",
+              "type": "string"
+            },
+            {
+              "id": "5993ece7-728c-44c0-ab85-5618930eb842",
+              "name": "token",
+              "value": "={{ $json.credentials.token }}",
+              "type": "string"
+            },
+            {
+              "id": "1120d7a9-a5d0-40ba-8109-971c9e6765f3",
+              "name": "enable_ai_keyword",
+              "value": "={{ $json.keyword_actions.find(k => k.action_type === 'ENABLE_AI')?.keyword }}",
+              "type": "string"
+            },
+            {
+              "id": "02e9ac17-bdc1-424f-94ba-682a23522dc0",
+              "name": "disable_ai_keyword",
+              "value": "={{ $json.keyword_actions.find(k => k.action_type === 'DISABLE_AI')?.keyword }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2336,
+        -64
+      ],
+      "id": "8ef4b11c-dd39-4ac6-9d5f-75caa909f5d1",
+      "name": "Edit Fields12"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a5d0d964-730f-4e01-99f0-cecb4fea5c2f",
+              "leftValue": "={{ $('Edit Fields4').item.json.ai_enabled }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10832,
+        -656
+      ],
+      "id": "abdd0fe0-8000-4fe5-9bc0-e349b1f11fc8",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "user",
+              "message": "={{ $('Edit Fields12').item.json.original_message_text }}"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryManager",
+      "typeVersion": 1.1,
+      "position": [
+        11408,
+        -96
+      ],
+      "id": "9cdb9d0d-ad2e-4fe7-8366-129c9246cf53",
+      "name": "Chat Memory Manager",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4e2d4eee-1aaf-40d5-a6b4-0e7ee44acd1e",
+              "leftValue": "={{ $input.last().json.id }}",
+              "rightValue": "={{ $('Edit Fields2').item.json.message_id }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        11984,
+        -688
+      ],
+      "id": "4cf61fb0-4071-483b-8d88-f3edf4795d2d",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "queue",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sender_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.sender_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        12208,
+        -704
+      ],
+      "id": "bafe3322-0a00-4c64-84a7-d3df9ec869de",
+      "name": "Supabase4",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "728b2c0a-ef62-4d3a-868e-164b68053a78",
+              "name": "usermessage",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "64e819e2-0d0b-4af0-b5c1-13885de2c092",
+              "name": "id",
+              "value": "={{ $('Edit Fields12').item.json.platform_user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "9c70d4d4-52dd-429e-9a3b-69fb33c7c965",
+              "name": "contact_uuid",
+              "value": "={{ $('Edit Fields2').item.json.uuid }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        12640,
+        -704
+      ],
+      "id": "487e56bc-3e32-41ee-b89b-e2df53a69613",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        12432,
+        -704
+      ],
+      "id": "69abc914-5ddc-4d7f-aad2-6ba807f7a539",
+      "name": "Aggregate4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        12208,
+        -512
+      ],
+      "id": "2a11bc46-eaa2-456b-bdaa-f3785f1abfd9",
+      "name": "No Operation, do nothing6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c4c4875-71b4-4638-b0c5-91eefeec85c5",
+              "name": "message_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "bac0da0b-a426-48fe-8605-937c4a2cb12b",
+              "name": "uuid",
+              "value": "={{ $('Edit Fields4').item.json.contact_uuid }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        11200,
+        -688
+      ],
+      "id": "2e268230-d0ed-4c42-8c84-72a5f4831347",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "queue",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sender_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields12').item.json.platform_user_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        11584,
+        -688
+      ],
+      "id": "74b0e491-ad68-43a0-a596-365c7ea33a1f",
+      "name": "Supabase2",
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      body: $('Aggregate4').first().json.message.join(\"  \") // Directly assign the joined string\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12848,
+        -704
+      ],
+      "id": "6f7958aa-5cca-4ca8-8b84-1d31e5e43b84",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        11792,
+        -688
+      ],
+      "id": "29646c82-43f0-4347-b4c9-c604684ea357",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        11424,
+        -688
+      ],
+      "id": "d9aafdd2-b5af-427a-9b0e-4a01775c9b07",
+      "name": "Wait1",
+      "webhookId": "b4c877f4-6fb7-4b9e-b46e-92b499960143"
+    },
+    {
+      "parameters": {
+        "model": "qwen3.8-max",
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "cd69c7de-21e5-4eb0-8e6b-b1ac1be23425",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        12544,
+        -144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "10X6P4UZOSf6ky38",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Semantic natural-language product search in Arabic. Use for descriptive or vague requests (\"a cable that works outdoors\", \"something for a home office network\") where the customer does not name an exact product. Input: query — the customer's request in natural Arabic. Returns up to 5 ranked products using hybrid vector + keyword search.",
+        "method": "POST",
+        "url": "http://semantic-search:8080/search",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $fromAI('parameters0_Value', `search query`, 'string') }}"
+            },
+            {
+              "name": "top_k",
+              "value": "={{ 20 }}"
+            },
+            {
+              "name": "mode",
+              "value": "hybrid"
+            },
+            {
+              "name": "fields",
+              "value": "={{ [\"name\", \"price\", \"stock_status\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13088,
+        -144
+      ],
+      "id": "e4febb87-1ade-453a-95f6-bb229e8fe50d",
+      "name": "Semantic-Search"
+    },
+    {
+      "parameters": {
+        "toolDescription": " Get all product categories in the store with their id, name, and product count. Call this when the customer asks what the store sells, asks to browse, or when you need a category_id before calling browse_category. No input required",
+        "url": "http://woocommerce-wrapper:8081/api/categories",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13264,
+        -160
+      ],
+      "id": "29293c1e-a3cb-4243-8004-bce47fa5ad83",
+      "name": "list_categories"
+    },
+    {
+      "parameters": {
+        "toolDescription": "List products inside a specific category. Use after list_categories when the customer wants to see what is available in a category. Input: category_id — the numeric category id returned by list_categories.",
+        "url": "http://woocommerce-wrapper:8081/api/products",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "category",
+              "value": "={{ $fromAI('parameters0_Value', `category_id`, 'string') }}"
+            },
+            {
+              "name": "per_page",
+              "value": "50"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13424,
+        -160
+      ],
+      "id": "b27830e9-d939-4f6f-91ea-c05eb0468fab",
+      "name": "browse_category"
+    },
+    {
+      "parameters": {
+        "toolDescription": " Exact keyword or SKU catalog search. Use when the customer names a specific product, model, brand, or SKU. Input: search — the keyword or SKU. Returns up to 5 matching products with id, name, price, and stock status",
+        "url": "http://woocommerce-wrapper:8081/api/products",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search",
+              "value": "{search}"
+            },
+            {
+              "name": "per_page",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13552,
+        16
+      ],
+      "id": "e014d0de-7d4c-4422-b821-fa3acbed0e0b",
+      "name": "search_catalog",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get full details for one product, including its current image URL, price, SKU, stock status, and attributes. Input: id — the numeric product id from a previous search. Always call this before returning send_product_image so the image link is current",
+        "url": "=http://woocommerce-wrapper:8081/api/products/8135",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": []
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13680,
+        -160
+      ],
+      "id": "7b9aaa2c-32f0-4121-a5b9-579d0902dd39",
+      "name": "get_product"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Create a WooCommerce order. Only call after the product, quantity, customer name, phone, address, and city have all been collected AND the customer has explicitly confirmed the purchase. Shipping is Saudi Arabia only; payment is Telr only. Inputs: product_id, quantity, name, address, city, phone, email. Returns the order id, total, and a payment_url — give that link to the customer verbatim",
+        "method": "POST",
+        "url": "http://woocommerce-wrapper:8081/api/orders",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"line_items\": [\n    {\n      \"product_id\": {{ $fromAI('product_id', 'The numeric WooCommerce product ID to order', 'number') }},\n      \"quantity\": {{ $fromAI('quantity', 'How many units the customer wants', 'number') }}\n    }\n  ],\n  \"billing\": {\n    \"first_name\": \"{{ $fromAI('name', 'Customer full name', 'string') }}\",\n    \"last_name\": \"-\",\n    \"address_1\": \"{{ $fromAI('address', 'Street address inside Saudi Arabia', 'string') }}\",\n    \"city\": \"{{ $fromAI('city', 'City inside Saudi Arabia', 'string') }}\",\n    \"country\": \"SA\",\n    \"phone\": \"{{ $fromAI('phone', 'Customer phone number', 'string') }}\"\n  },\n  \"payment_method\": \"wctelr\",\n  \"payment_method_title\": \"Telr\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        13856,
+        -160
+      ],
+      "id": "0778bebc-3991-4530-aad6-34bb2741c1fd",
+      "name": "place_order"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Look up the status of an existing order using the customer's own phone number. Input: phone — the customer's WhatsApp number. Returns order status, total, and line items, or 404 if nothing is found. Never ask for another person's phone number.",
+        "url": "http://woocommerce-wrapper:8081/api/orders/track",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $fromAI('phonenumber', `phone number of the client`, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        14048,
+        -176
+      ],
+      "id": "702577c6-195a-448c-a019-def7b5124cb1",
+      "name": "track_order"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================================\n// Parse AI Agent Output — iConnect WhatsApp Store Bot\n// Paste this into the Code node between \"AI Agent\" and the \"Route Intent\" Switch.\n//\n// Contract produced (always, even on total failure):\n//   { intent, reply, product_id, complaint, order, detected_category, client_status, _parse }\n// ============================================================================\n\nconst VALID_INTENTS = [\n  'conversation',\n  'product_details',\n  'complaint',\n  'customer_service',\n  'order_created',\n];\n\nconst VALID_CATEGORIES = [\n  'Computers & Computing',\n  'Printers & Scanners',\n  'Ink, Toner & Printing Supplies',\n  'Networking & Connectivity',\n  'CCTV & Surveillance',\n  'Access Control Systems',\n  'Security & Alarm Systems',\n  'IP Telephony & Communication',\n  'Time Attendance & Biometric Systems',\n  'Power & Electrical Protection',\n  'Storage & Backup',\n];\n\nconst VALID_CLIENT_STATUSES = [\n  'new',\n  'interested',\n  'customer',\n  'repeat_customer',\n  'support',\n  'inactive',\n];\n\nconst FALLBACK_REPLY = 'عذراً، حصل خطأ مؤقت. ممكن تعيد رسالتك؟';\n\n/** Build a guaranteed-valid item. */\nfunction ok(intent, reply, extra = {}, parseNote = 'ok') {\n  return [{\n    json: {\n      intent,\n      reply: reply || FALLBACK_REPLY,\n      product_id: extra.product_id ?? null,\n      complaint: extra.complaint ?? null,\n      order: extra.order ?? null,\n      detected_category: extra.detected_category ?? null,\n      client_status: extra.client_status ?? (extra.detected_category ? 'interested' : 'new'),\n      _parse: parseNote,\n    },\n  }];\n}\n\n// --- 0. Get the agent's raw text -------------------------------------------\nconst input = $input.first().json;\nconst raw = input.output ?? input.text ?? input.response ?? '';\n\nif (!raw || typeof raw !== 'string') {\n  return ok('conversation', FALLBACK_REPLY, {}, 'no-output-field');\n}\n\n// --- 1. Strategy A: markdown code fence ------------------------------------\nlet jsonString = null;\nconst fence = raw.match(/`{3,}(?:json)?\\s*([\\s\\S]*?)\\s*`{3,}/);\nif (fence && fence[1]) jsonString = fence[1].trim();\n\n// --- 2. Strategy B: first '{' .. last '}' ----------------------------------\nif (!jsonString) {\n  const start = raw.indexOf('{');\n  const end = raw.lastIndexOf('}');\n  if (start > -1 && end > start) jsonString = raw.slice(start, end + 1).trim();\n}\n\n// --- 3. Strategy C: no JSON at all → treat the whole text as the reply ------\nif (!jsonString) {\n  return ok('conversation', raw.trim(), {}, 'plain-text-fallback');\n}\n\n// --- 4. Parse, with a newline-repair retry ---------------------------------\nlet parsed = null;\ntry {\n  parsed = JSON.parse(jsonString);\n} catch (e) {\n  try {\n    parsed = JSON.parse(\n      jsonString.replace(/\\n/g, '\\\\n').replace(/\\r/g, '\\\\r').replace(/\\t/g, '\\\\t')\n    );\n  } catch (e2) {\n    return ok('conversation', raw.trim(), {}, 'parse-failed');\n  }\n}\n\nif (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {\n  return ok('conversation', raw.trim(), {}, 'not-an-object');\n}\n\n// --- 5. Normalise the fields ------------------------------------------------\nlet intent = typeof parsed.intent === 'string' ? parsed.intent.trim() : '';\nlet note = 'ok';\n\nif (!VALID_INTENTS.includes(intent)) {\n  note = `unknown-intent:${intent || 'empty'}`;\n  intent = 'conversation';\n}\n\nlet reply = parsed.reply ?? parsed.botResponse ?? parsed.response ?? '';\nif (typeof reply !== 'string' || !reply.trim()) {\n  reply = raw.trim() || FALLBACK_REPLY;\n  note = 'missing-reply';\n}\nreply = reply.trim();\n\nlet productId = null;\nif (parsed.product_id !== null && parsed.product_id !== undefined) {\n  const n = Number(parsed.product_id);\n  if (Number.isFinite(n) && n > 0) productId = Math.trunc(n);\n}\n\nconst complaint =\n  typeof parsed.complaint === 'string' && parsed.complaint.trim()\n    ? parsed.complaint.trim()\n    : null;\n\nconst order =\n  parsed.order && typeof parsed.order === 'object' && !Array.isArray(parsed.order)\n    ? parsed.order\n    : null;\n\n// Normalise detected_category\nlet detectedCategory = null;\nif (typeof parsed.detected_category === 'string' && parsed.detected_category.trim()) {\n  const trimmed = parsed.detected_category.trim();\n  const matched = VALID_CATEGORIES.find(c => c.toLowerCase() === trimmed.toLowerCase());\n  if (matched) detectedCategory = matched;\n}\n\n// Normalise client_status\nlet clientStatus = 'new';\nif (typeof parsed.client_status === 'string' && parsed.client_status.trim()) {\n  const s = parsed.client_status.trim().toLowerCase();\n  if (VALID_CLIENT_STATUSES.includes(s)) clientStatus = s;\n}\nif (!clientStatus || clientStatus === 'new') {\n  if (detectedCategory || intent === 'product_details') clientStatus = 'interested';\n  if (intent === 'order_created') clientStatus = 'customer';\n  if (intent === 'complaint' || intent === 'customer_service') clientStatus = 'support';\n}\n\n// --- 6. Guards ---------------------------------------------------------------\nif (intent === 'product_details' && productId === null) {\n  return ok('conversation', reply, { detected_category: detectedCategory, client_status: clientStatus }, 'product_details-without-product_id');\n}\n\nif (intent === 'complaint' && !complaint) {\n  return ok('complaint', reply, { complaint: reply, detected_category: detectedCategory, client_status: 'support' }, 'complaint-body-defaulted');\n}\n\nif (intent === 'order_created' && (!order || !order.order_number)) {\n  return ok('conversation', reply, { detected_category: detectedCategory, client_status: clientStatus }, 'order_created-without-order');\n}\n\nreturn ok(intent, reply, {\n  product_id: productId,\n  complaint,\n  order,\n  detected_category: detectedCategory,\n  client_status: clientStatus,\n}, note);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        14352,
+        -720
+      ],
+      "id": "ca1a3883-fd16-4282-9b3f-7f49194fa043",
+      "name": "Code in JavaScript2",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a5cfc9ec-76be-4d85-9c42-e8cc927d5196"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "conversation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "633b3564-fc45-4048-b7b8-279b82a0bb34",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "product_details",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "product_details"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ca4cc3b6-bc25-4110-8df9-19289a0bfe50",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "complaint",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "complaint"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "53ea9614-c270-4dcb-bd40-e96fb66fcc3a",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "customer_service"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c0bba66f-7d67-40d8-a357-9754f974bed1",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "order_created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "order_created"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        14720,
+        -752
+      ],
+      "id": "667c3129-95fe-4792-b80e-ccac8f286439",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://zernio.com/api/v1/inbox/conversations/{{ $('Webhook').item.json.body.conversation.id }}/messages ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer sk_dcb2321d47fa2570df444d744bd7fe99deeb11ee7f1df082f281bd203e286276"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=accountId",
+              "value": "={{ $('Webhook').item.json.body.account.accountId }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        15392,
+        -1200
+      ],
+      "id": "39a26ab4-b6d4-48d6-be4d-aa4f02c198e4",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $json.data.messageId }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "ai"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ DateTime.now().toISO() }}"
+            },
+            {
+              "fieldId": "text_content",
+              "fieldValue": "={{ $('Switch1').item.json.reply }}"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "text"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        15712,
+        -1200
+      ],
+      "id": "9ae6bea3-8ee7-46f7-8a4e-b090dee0ce48",
+      "name": "Create a row",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body }}",
+        "options": {
+          "systemMessage": "=\n---\n\n## 1. Identity & context\n\nYou are **\"آي كونكت\"**, the digital assistant for the **iConnect** store (network cables and networking equipment). You talk to customers on WhatsApp **in Arabic**.\n\n- Current date/time: {{ $now.setZone('Asia/Riyadh').toISO() }}\n- Currency: Saudi Riyal (**SAR**) — shipping **inside Saudi Arabia only** — payment via **Telr link only**.\n- You reply to the customer in their own Arabic dialect. All of your *thinking* and these rules are in English; everything the customer reads is Arabic.\n\n---\n\n## 2. ⛔ Golden rule: act first, then answer — never promise\n\n**The customer receives exactly one message.** After your reply, the turn ends. There is no second message, no \"I'll get back to you.\" If a question needs store data, **call the tool now, in this same turn, then write the final reply containing the result.**\n\n### Phrases BANNED in the `reply` field\nThese mean you promised an action that will never happen. Never write any of them:\n\n> خلني أبحث · خليني أشوف · سأبحث · هبحث · هدور لك · راح أشوف · دعني أتحقق · سأتحقق · جاري البحث · لحظة · دقيقة · ثانية · انتظر · سأعود إليك · هرجعلك · بعد قليل\n\n**If you are about to write any of these — stop, call the tool, then write the reply with the real result.**\n\n### Mandatory tool gate\n| If the customer's message is about… | You MUST call |\n|---|---|\n| A product by general description (\"كاميرات\", \"كابل للخارج\") | `semantic_search` |\n| A specific product / model / SKU | `semantic_search` (it also matches keywords & SKU) |\n| \"What do you have?\" / browsing / categories | `list_categories` |\n| Products in a specific category | `browse_category` |\n| Details or **specifications** of a product | `get_product` |\n| **Product images** (\"وريني صوره\", \"ابعتلي صورة\") | `get_product`, then `intent: product_details` (the system sends the images) |\n| Price or availability of any product | `semantic_search` (never answer from memory) |\n| Status of an existing order | `track_order` |\n| Confirming a purchase after all data is collected | `place_order` |\n\n**You may not output JSON before the tool results you need have arrived.** The JSON object is the **last** step of the turn, never the first.\n\n### The only cases you may answer WITHOUT a tool\nA plain greeting with no question · thanks or goodbye · a policy question (shipping/payment/returns) from §8 · a complaint · a request for a human agent.\n\n### Wrong ✕ vs right ✓\n> Customer: \"عندكم كاميرات؟\"\n\n✕ **Wrong** — a promise with no action; the customer receives nothing after it:\n```json\n{\"intent\":\"conversation\",\"reply\":\"أهلًا 👋 خلني أبحث لك عن الكاميرات المتوفرة وأرجع لك بالتفاصيل.\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n✓ **Right** — call `semantic_search` with \"كاميرات مراقبة\" first, then:\n```json\n{\"intent\":\"conversation\",\"reply\":\"نعم متوفر عندنا عدة كاميرات مراقبة:\\n• كاميرا داخلية 2MP — 180 ريال\\n• كاميرا خارجية 4MP — 320 ريال\\nأي وحدة تحب تشوف تفاصيلها وصورها؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**If the tool returns nothing,** say so honestly — do not invent a product and do not promise to search again:\n```json\n{\"intent\":\"conversation\",\"reply\":\"ما لقيت كاميرات متوفرة حالياً في المتجر 🙏 تخصصنا كابلات ومعدات الشبكات — تحب أعرض لك الأقسام المتوفرة؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n---\n\n## 3. Output contract — obey exactly (a program parses this, not a human)\n\nYour turn ends with **one JSON object and nothing else**. A downstream Code node reads it character by character. If it cannot parse, **the customer receives nothing.**\n\n### The object — always this exact shape\n```json\n{\"intent\":\"conversation\",\"reply\":\"...\",\"product_id\":null,\"complaint\":null,\"order\":null,\"detected_category\":null,\"client_status\":\"new\"}\n```\n\nMandatory rules:\n1. The output **starts with `{` and ends with `}`**. Nothing before it, nothing after it — no greeting, no explanation, no ``` code fences.\n2. Always all **seven keys**, always in this order: `intent`, `reply`, `product_id`, `complaint`, `order`, `detected_category`, `client_status`.\n3. `detected_category` = exactly one of the 11 Product Categories below, or `null` if no specific product was inquired:\n   - `Computers & Computing` (Laptops, PCs, Desktops, Monitors, Accessories)\n   - `Printers & Scanners` (Laser, Thermal, Label Printers, Scanners)\n   - `Ink, Toner & Printing Supplies` (Cartridges, Toners, Printing Paper/Ribbons)\n   - `Networking & Connectivity` (Routers, Switches, Access Points, Patch Panels, Ethernet Cables)\n   - `CCTV & Surveillance` (Security Cameras, NVR, DVR, Surveillance accessories)\n   - `Access Control Systems` (Smart Locks, Turnstiles, Access Cards, Gates)\n   - `Security & Alarm Systems` (Alarm panels, Motion Sensors, Anti-theft sirens)\n   - `IP Telephony & Communication` (IP Phones, PBX Central, VoIP Headsets)\n   - `Time Attendance & Biometric Systems` (Fingerprint/Face attendance devices)\n   - `Power & Electrical Protection` (UPS, Power Supplies, Voltage Regulators)\n   - `Storage & Backup` (Hard drives, SSDs, NAS Storage Servers, Backup Units)\n4. `client_status` = one of: `new` (general greeting/chat), `interested` (asking about products/specs/pricing), `customer` (order placed), `support` (complaint/human agent).\n3. `intent` = exactly one of: `conversation`, `product_details`, `complaint`, `customer_service`, `order_created`.\n4. `reply` = the Arabic message to the customer (a JSON string). Follow **\"Writing a safe reply\"** below.\n5. `product_id` = a **bare number** (e.g. `8135`) or `null`. Never quoted, never `\"8135\"`.\n6. `complaint` = an Arabic string, or `null`.\n7. `order` = an object, or `null`.\n8. Unused fields are exactly `null` — lowercase, no quotes.\n\n### Writing a safe `reply` — this is what usually breaks parsing\n- ❌ **Never type a double-quote `\"` inside the reply.** It ends the JSON string early and breaks the whole object. If you need quotation marks, use Arabic « » or none at all.\n  - ✕ `\"reply\":\"كابل \"سيسكو\" أصلي\"` ← breaks\n  - ✓ `\"reply\":\"كابل سيسكو أصلي\"`\n  - ✓ `\"reply\":\"كابل «سيسكو» أصلي\"`\n- For a line break inside the reply, type the two characters `\\n`. **Never press Enter** inside the value.\n- Do **not** use any other backslash: no `\\t`, no `\\\"`, no `\\\\`, no `\\u`.\n- **No markdown** inside the reply — no `*`, no `#`, no backticks. Plain text and the bullet `•` only.\n- Emojis are allowed (one maximum, per §9).\n\n### Silent self-check before you output\n- Starts with `{`, ends with `}`, nothing outside? \n- Exactly five keys, correct order? \n- **Zero `\"` characters inside any Arabic text?** \n- `product_id` is a bare number or `null`? \n- Every unused field is `null`? \n\nIf any check fails, fix it before sending.\n\n| Field | Filled when |\n|---|---|\n| `intent` | always — one of the five |\n| `reply` | always — the text the customer will read |\n| `product_id` | only with `product_details` — the product number |\n| `complaint` | only with `complaint` — a short complaint summary |\n| `order` | only with `order_created` — the order-tool result |\n\n---\n\n## 4. Intents\n\n### `conversation` — the default\nAny normal exchange: greeting, search results, prices, availability, comparisons, policies, and the result of order tracking.\n\n### `product_details` — one product with its images and specs\nUse when the customer asks for details, images, or specs of a **specific product whose number you know**.\n\n#### 📸 How images are sent — read carefully\n**You do not send the images yourself, and you do not need to see them.**\n\nThe moment you output `\"intent\": \"product_details\"` with a valid `product_id`, **the system automatically** fetches every image of that product from the store, sends them to the customer on WhatsApp, then sends your `reply` text.\n\nTherefore:\n- **Sending images = setting `intent` to `product_details` and putting the number in `product_id`.** This is the only way, and it is always available to you.\n- ⛔ **Strictly forbidden** to say: \"ما أقدر أجيب الصور\" · \"الصور غير متوفرة عندي\" · \"البيانات مش كاملة\" · \"شوف الصور في صفحة المنتج\" · \"تحب أحوّلك لموظف\" — just because the customer asked for an image.\n- It does not matter if you see no image URL in the `get_product` result — output `product_details` anyway; the system handles the rest.\n- **Any request containing \"صورة/صور/شكله/وريني/ابعتلي\"** for a product whose number you know → `product_details` directly.\n- Don't know the number yet? Search with `semantic_search` to get it, **then** output `product_details` — do not apologize.\n\n#### Specs\n- Call `get_product` first — **it is the only source of specifications.** Search results return name, price, and stock only; they carry no specs.\n- Put the number in `product_id`.\n- **Write into `reply` every useful spec** returned by `get_product` in its `attributes` field — not just the price.\n\nHow to format the specs:\n1. Show each spec as a short line: `الاسم: القيمة`.\n2. **Order by importance to the customer:** what they asked about first, then the product's core specs, then the rest.\n3. **4 to 7 specs maximum.** If the customer asked about one specific spec (e.g. \"قطر العدسة\" or \"هل يدعم PoE\"), lead with it explicitly.\n4. Add `sku` and `brand` if present and useful.\n5. Mention `short_desc` briefly if it adds new information.\n\n#### ⚠️ Store data is not perfect\nSome products carry specs copied from a different item type (e.g. a network cable listed with \"الدقة: 6MP\" or a lens size). So:\n- **State only the specs that make sense for the product type itself.** A cable has no resolution and no lens — drop them silently.\n- If a spec is contradictory or nonsensical, **remove it without commenting** — do not tell the customer the data is wrong.\n- If the customer asks about a spec **not present** in `attributes`: say honestly it isn't listed and offer a human handoff. **Do not guess and do not fill it in from general knowledge of the model.**\n\n- **Never put image URLs in the text** — the system sends them automatically.\n\n### `complaint`\nDissatisfaction or a problem: late shipment, damaged/wrong product, wrong charge, poor service.\n- Put a short summary in `complaint`; apologize professionally in `reply`.\n- **Distinguish:** a *question* about a late order → `conversation` + `track_order`. *Complaining* about the delay → `complaint`.\n\n### `customer_service` — hand off to a human\nAn explicit request to talk to a person, or a cancellation/refund, or a wholesale request, or you repeatedly cannot help.\n⚠️ This intent **stops automated replies** on the conversation — use it only when genuinely needed.\n\n### `order_created` — after a real order is placed\n**Only** after `place_order` succeeds and returns a `payment_url`. Fill `order`, and put the full link in `reply` unchanged.\n\n---\n\n## 5. Decision tree\n\n1. Dissatisfaction or a problem? → `complaint`\n2. Asking for a human / cancellation / refund? → `customer_service`\n3. Just created a successful order? → `order_created`\n4. Wants details/images/specs of a product whose number you know? → **`get_product`** then `product_details`\n5. Otherwise → **call the right tool (§2)** then `conversation`\n\n---\n\n## 6. Order flow\n\nCollect naturally during the conversation — not as a form:\n\n| Item | Notes |\n|---|---|\n| `product_id` + `quantity` | from search results |\n| Full name | — |\n| Address + city | **inside Saudi Arabia only** |\n| Phone number | defaults to the customer's number |\n\n**Before calling `place_order`:** summarize the order (product, quantity, price, address) and ask for an explicit confirmation (\"تأكيد\"/\"نعم\"). Do not call `place_order` before confirmation.\n**Address outside Saudi Arabia:** apologize politely and do not proceed.\n\nAfter success:\n```json\n{\"intent\":\"order_created\",\"reply\":\"تم إنشاء طلبك ✅\\nالإجمالي: 195 ريال\\nلإتمام الدفع:\\nhttps://...\",\"product_id\":null,\"complaint\":null,\"order\":{\"order_id\":1042,\"order_number\":\"1042\",\"total\":\"195.00\",\"subtotal\":\"180.00\",\"payment_url\":\"https://...\"}}\n```\n\n---\n\n## 7. Tools\n\n| Tool | When | Returns |\n|---|---|---|\n| `semantic_search` | any product request: descriptive (\"كابل يتحمل الاستخدام الخارجي\") or a specific name/model/SKU | short list: number, name, price, stock |\n| `list_categories` | \"إيش عندكم؟\" or general browsing | category numbers and names |\n| `browse_category` | products in a specific category | short list, like search |\n| `get_product` | immediately before `product_details`, and for any spec question | **full details: specs, SKU, images** |\n| `place_order` | after data is collected and confirmed | order number and `payment_url` |\n| `track_order` | status of an existing order | order status and line items |\n\n> ⚠️ **Search tools do not return specs** — only name, price, availability. Any spec question (resolution, lens, dimensions, PoE, storage…) requires `get_product` after the search, in the same turn.\n\nRules:\n- Every price, spec, or stock status **must** come from a tool result in this turn.\n- Call several tools in the same turn when needed (search → fetch details).\n- If a tool fails or returns empty: tell the customer honestly, and do not invent a substitute.\n- Never mention tool names or technical details to the customer.\n\n---\n\n## 8. Store policies\n\n- **Shipping:** inside the Kingdom of Saudi Arabia only.\n- **Payment:** secure electronic payment link via Telr — no cash on delivery.\n- **Currency:** Saudi Riyal.\n- **Returns & exchange:** [return/exchange policy — put the real policy text here].\n\n---\n\n## 9. Style\n\n- Professional, friendly, direct. Short sentences.\n- Accept every dialect and spelling mistake; reply in a dialect close to the customer's.\n- Prices: \"150 ريال\".\n- One emoji maximum.\n- When showing several products, use a short list (name — price) and end with one clear question.\n- Do not repeat the customer's words and do not open with filler.\n\n---\n\n## 10. Never do\n\n- ❌ Never promise to search or to return later — act now (§2).\n- ❌ Never state a price or availability that did not come from a tool in this turn.\n- ❌ Never create an order without explicit confirmation.\n- ❌ Never promise shipping outside Saudi Arabia or cash on delivery.\n- ❌ Never put image URLs inside `reply` — use `product_details`.\n- ❌ **Never apologize for being unable to send an image.** Images are sent automatically with `product_details` — use it instead of apologizing or handing off.\n- ❌ Never refer the customer to \"the product page in the store\" to see images — you can send them.\n- ❌ Never step outside the five intents.\n- ❌ Never write a `\"` character inside `reply` (§3).\n- ❌ Never write a single character outside the JSON object.\n\n---\n\n## 11. Examples\n\n**Greeting only — no tool needed**\n> Customer: \"السلام عليكم\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"وعليكم السلام، أهلاً بك في آي كونكت 👋 كيف أقدر أساعدك؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**Search — after `semantic_search` with \"كابل cat6\"**\n> Customer: \"عندكم كابل كات 6؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"نعم متوفر:\\n• Cat6 UTP 20 متر — 45 ريال\\n• Cat6 خارجي 50 متر — 120 ريال\\nأي واحد تحب تشوف تفاصيله؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**Camera details — after `get_product(8135)`** (note the real specs from `attributes`)\n> Customer: \"ابعتلي تفاصيل الكاميرا دي\"\n```json\n{\"intent\":\"product_details\",\"reply\":\"كاميرا مراقبة هيكفيجن DS-2CE70KF0T-PFS-B36\\nالسعر: 101 ريال — متوفر\\n\\nالمواصفات:\\nالدقة: 6MP (3072 × 2048)\\nمقاس العدسة: 2.8 mm\\nمكان الاستخدام: داخلي وخارجي\\nتقنية الـ PoE: نعم\\nالتخزين: يدعم microSD حتى 256GB\\nالميزات الذكية: كشف الحركة، تجاوز الخط، اكتشاف التسلل\\n\\nتحب أجهزها لك في طلب؟\",\"product_id\":8135,\"complaint\":null,\"order\":null}\n```\n\n**Cable details — after `get_product(8825)`** (copied-in camera specs are dropped silently)\n> Customer: \"الكابل ده مواصفاته إيه؟\"\n```json\n{\"intent\":\"product_details\",\"reply\":\"كابل شبكة هيكفيجن CAT6 UTP نحاس DS-1LN6-UU\\nالسعر: 469 ريال — متوفر\\n\\nالمواصفات:\\nالنوع: CAT6 UTP نحاس صافي\\nيدعم PoE: نعم\\nمكان الاستخدام: داخلي وخارجي\\nاللون: أبيض\\nرقم الصنف: DS-1LN6-UU\\n\\nتحب أضيفه لك في طلب؟\",\"product_id\":8825,\"complaint\":null,\"order\":null}\n```\n\n**Image request — the common mistake**\n> Customer: \"ابعتلي صور راوتر Archer C86\"\n\n✕ **Serious error** — apologizing for an ability it actually has; the customer receives no image:\n```json\n{\"intent\":\"conversation\",\"reply\":\"عذراً 🙏 ما أقدر أجيب صور راوتر Archer C86 من النظام حالياً — البيانات المتوفرة عندي مش كاملة. تقدر تشوف الصور عبر صفحة المنتج في المتجر. تحب أحوّلك لأحد الموظفين؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n✓ **Correct** — search for the number, call `get_product`, then output `product_details`; the system sends the images:\n```json\n{\"intent\":\"product_details\",\"reply\":\"راوتر TP-Link Archer C86\\nالسعر: 182 ريال — متوفر\\n\\nالمواصفات:\\nالسرعة: AC1900 ثلاثي النطاق\\nعدد الهوائيات: 6\\nالمنافذ: 4 × جيجابت\\n\\nتحب أجهزه لك في طلب؟\",\"product_id\":9142,\"complaint\":null,\"order\":null}\n```\n\n**Spec not listed**\n> Customer: \"الكابل ده طوله كام؟\" — and `attributes` has no length\n```json\n{\"intent\":\"conversation\",\"reply\":\"الطول غير مذكور في بيانات المنتج عندي 🙏 تحب أحوّلك لأحد الموظفين يأكده لك؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**No results**\n> Customer: \"عندكم لابتوبات؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"ما عندنا لابتوبات 🙏 تخصصنا كابلات ومعدات الشبكات. تحب أعرض لك الأقسام المتوفرة؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**Tracking — after `track_order`**\n> Customer: \"وين طلبي؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"طلبك رقم #1042 قيد الشحن، ومتوقع يوصلك خلال يومين 🚚\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**Complaint**\n> Customer: \"الكابل وصلني مقطوع وتعبت وأنا أكلمكم\"\n```json\n{\"intent\":\"complaint\",\"reply\":\"نعتذر بشدة عن هذه التجربة 🙏 تم تسجيل شكواك وتحويلها للمسؤولين، وسيتم التواصل معك لحلها بأسرع وقت.\",\"product_id\":null,\"complaint\":\"استلم كابل تالف ويشتكي من عدم الاستجابة السابقة\",\"order\":null}\n```\n\n**Human agent**\n> Customer: \"أبي أكلم واحد من الموظفين\"\n```json\n{\"intent\":\"customer_service\",\"reply\":\"تم تحويلك لأحد ممثلي خدمة العملاء وسيتواصل معك قريباً 🙏\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**Outside Saudi Arabia**\n> Customer: \"أبي أشحن للكويت\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"عذراً، الشحن حالياً متاح داخل المملكة العربية السعودية فقط 🙏\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        13360,
+        -704
+      ],
+      "id": "8574712e-411d-43a5-a0ad-8dbc5d326402",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields12').item.json.platform_user_id }}",
+        "tableName": "n8n_chat_histories1",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        12896,
+        -144
+      ],
+      "id": "8198f528-3cb0-4b0b-95fe-4a2e3dbdc673",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "UbqmlgeZim8ab5pz",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek-v4-flash-0731",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAlibabaCloud",
+      "typeVersion": 1,
+      "position": [
+        12736,
+        -144
+      ],
+      "id": "c8ae7ad2-19fc-4d5b-9b8c-148ed9fea04e",
+      "name": "Qwen Cloud Chat Model",
+      "credentials": {
+        "alibabaCloudApi": {
+          "id": "RCrMAbklIzMF1sNT",
+          "name": "Qwen Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://woocommerce-wrapper:8081/api/products/{{ $json.product_id }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        15552,
+        -976
+      ],
+      "id": "15c1474a-e904-400e-b588-aff51ab05ad3",
+      "name": "HTTP Request3",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "images",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        15776,
+        -976
+      ],
+      "id": "57f1554e-c3b8-4b39-abbd-00e626a82a4f",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://zernio.com/api/v1/inbox/conversations/{{ $('Webhook').item.json.body.conversation.id }}/messages ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer sk_dcb2321d47fa2570df444d744bd7fe99deeb11ee7f1df082f281bd203e286276"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "accountId",
+              "value": "={{ $('Webhook').item.json.body.account.accountId }}"
+            },
+            {
+              "name": "attachmentUrl",
+              "value": "={{ $json.images }}"
+            },
+            {
+              "name": "attachmentType",
+              "value": "image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        16416,
+        -928
+      ],
+      "id": "8c3d0622-84ee-48cc-88e0-75888cc556f1",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $json.data.messageId }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "ai"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ DateTime.now().toISO() }}"
+            },
+            {
+              "fieldId": "attachment_url",
+              "fieldValue": "={{ $('Loop Over Items').item.json.images }}"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "image"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        16848,
+        -912
+      ],
+      "id": "a4526521-edbc-4a65-a300-341db33ac90e",
+      "name": "Create a row1",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        16000,
+        -976
+      ],
+      "id": "34207a84-9e37-46de-ad1f-b2db4c38335f",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://zernio.com/api/v1/inbox/conversations/{{ $('Webhook').first().json.body.conversation.id }}/messages ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer sk_dcb2321d47fa2570df444d744bd7fe99deeb11ee7f1df082f281bd203e286276"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=accountId",
+              "value": "={{ $('Webhook').item.json.body.account.accountId }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $('Code in JavaScript2').item.json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        16384,
+        -1120
+      ],
+      "id": "05d23764-4766-4421-8baf-9fda7cc50a01",
+      "name": "HTTP Request5",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "tableId": "messages",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "contact_id",
+              "fieldValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            },
+            {
+              "fieldId": "message_platform_id",
+              "fieldValue": "={{ $json.data.messageId }}"
+            },
+            {
+              "fieldId": "sender_type",
+              "fieldValue": "ai"
+            },
+            {
+              "fieldId": "platform_timestamp",
+              "fieldValue": "={{ DateTime.now().toISO() }}"
+            },
+            {
+              "fieldId": "text_content",
+              "fieldValue": "={{ $('Switch1').item.json.reply }}"
+            },
+            {
+              "fieldId": "content_type",
+              "fieldValue": "text"
+            },
+            {
+              "fieldId": "channel_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.channel_id }}"
+            },
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        16704,
+        -1120
+      ],
+      "id": "c00b7ddf-f7f8-4944-a5ba-cb6260baa1ff",
+      "name": "Create a row2",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uorfbqhsaxoofzqouqsj.supabase.co/rest/v1/rpc/update_client_stage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_platform_user_id",
+              "value": "={{ $('Code in JavaScript6').item.json.SenderJid }}"
+            },
+            {
+              "name": "p_channel_id",
+              "value": "={{ $('HTTP Request').item.json.id }}"
+            },
+            {
+              "name": "p_stage",
+              "value": "product_viewed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        17088,
+        -1120
+      ],
+      "id": "9b8e8130-e8f5-43f9-b6f4-e114ae45769e",
+      "name": "HTTP Request6",
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"contents\": [{\n    \"parts\":[\n      {\"text\": \"Transcribe this audio تماما كما ينطقها العميل\"},\n      {\"inlineData\": {\n        \"mimeType\": `audio/${$binary.data.fileExtension}`,\n        \"data\": $json.audioBase64 }\n      }\n    ]\n  }]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9280,
+        -1008
+      ],
+      "id": "8965af43-0312-4af7-ae22-14eeabbae6b5",
+      "name": "transcribe",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "pCxP1eZimKMyTpal",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body }}",
+        "options": {
+          "systemMessage": "=\n---\n\n## 1. الهوية\n\nأنت **\"آي كونكت\"**، المساعد الرقمي لمتجر iConnect لكابلات ومعدات الشبكات، وتتحدث مع العملاء على واتساب باللغة العربية.\n\n- التاريخ والوقت الآن: {{ $now.setZone('Asia/Riyadh').toISO() }}\n- العملة: الريال السعودي (SAR) — الشحن داخل السعودية فقط — الدفع عبر رابط Telr فقط\n\n---\n\n## 2. ⛔ القاعدة الأولى: نفِّذ ثم أجب — لا تَعِد أبداً\n\n**العميل يستقبل رسالة واحدة فقط.** بعد ردك تنتهي المحادثة من طرفك. لا توجد رسالة ثانية ترسلها لاحقاً، ولا يوجد \"سأعود إليك\".\n\nلذلك: **إذا كان السؤال يحتاج معلومة من المتجر، استدعِ الأداة الآن في نفس الدور، ثم اكتب الرد النهائي متضمناً النتيجة.**\n\n### عبارات ممنوعة منعاً باتاً في حقل `reply`\nهذه العبارات تعني أنك وعدت بعمل لن يحدث:\n\n> خلني أبحث · خليني أشوف · سأبحث · هبحث · هدور لك · راح أشوف · دعني أتحقق · سأتحقق · جاري البحث · لحظة · دقيقة · ثانية · انتظر · سأعود إليك · هرجعلك · بعد قليل\n\n**لو وجدت نفسك على وشك كتابة أي منها — توقّف، استدعِ الأداة، ثم اكتب الرد بالنتيجة الفعلية.**\n\n### بوابة الأدوات الإلزامية\n| إذا كانت رسالة العميل عن… | يجب استدعاء |\n|---|---|\n| منتج بوصف عام (\"كاميرات\"، \"كابل للخارج\") | `semantic_search` |\n| منتج/موديل/SKU محدد | `semantic_search` (يبحث بالكلمة المفتاحية أيضاً) |\n| \"إيش عندكم؟\" / تصفّح / أقسام | `list_categories` |\n| منتجات قسم معيّن | `browse_category` |\n| تفاصيل أو **مواصفات** منتج | `get_product` |\n| **صور منتج** (\"وريني صوره\"، \"ابعتلي صورة\") | `get_product` ← ثم `intent: product_details` (النظام يرسل الصور) |\n| سعر أو توفر أي منتج | `semantic_search` (لا تُجب من الذاكرة) |\n| حالة طلب سابق | `track_order` |\n| تأكيد شراء بعد اكتمال البيانات | `place_order` |\n\n**لا يُسمح بإخراج JSON قبل أن تصل نتائج الأدوات التي تحتاجها.** كائن الـ JSON هو آخر خطوة في الدور، وليس أوّلها.\n\n### الحالات الوحيدة التي تُجيب فيها بلا أداة\nتحية بسيطة بلا سؤال · شكر أو وداع · سؤال عن سياسة (شحن/دفع/استرجاع) من القسم 8 · شكوى · طلب موظف بشري.\n\n### خطأ ✕ مقابل صواب ✓\n\n> العميل: \"عندكم كاميرات؟\"\n\n✕ **خطأ** — وعد بلا تنفيذ، العميل لن يستقبل شيئاً بعده:\n```json\n{\"intent\":\"conversation\",\"reply\":\"أهلًا 👋 خلني أبحث لك عن الكاميرات المتوفرة وأرجع لك بالتفاصيل.\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n✓ **صواب** — استدعِ `semantic_search` بـ \"كاميرات مراقبة\" أولاً، ثم:\n```json\n{\"intent\":\"conversation\",\"reply\":\"نعم متوفر عندنا عدة كاميرات مراقبة:\\n• كاميرا داخلية 2MP — 180 ريال\\n• كاميرا خارجية 4MP — 320 ريال\\nأي وحدة تحب تشوف تفاصيلها وصورها؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**وإن لم تُرجع الأداة نتائج،** قل ذلك بصراحة — لا تخترع منتجاً ولا تَعِد بالبحث مجدداً:\n```json\n{\"intent\":\"conversation\",\"reply\":\"ما لقيت كاميرات متوفرة حالياً في المتجر 🙏 تخصصنا كابلات ومعدات الشبكات — تحب أعرض لك الأقسام المتوفرة؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n---\n\n## 3. صيغة الإخراج\n\nبعد انتهاء عملك مع الأدوات، أخرج **كائن JSON خام فقط**. أول حرف `{` وآخر حرف `}`.\n❌ ممنوع: أي علامات تنسيق (```)، أو أي نص قبل أو بعد الكائن.\n\n```json\n{\n  \"intent\": \"conversation | product_details | complaint | customer_service | order_created\",\n  \"reply\": \"نص الرسالة الكاملة للعميل بالعربية\",\n  \"product_id\": null,\n  \"complaint\": null,\n  \"order\": null\n}\n```\n\n| الحقل | متى يُملأ |\n|---|---|\n| `intent` | دائماً — واحد من الخمسة فقط |\n| `reply` | دائماً — النص الذي سيصل للعميل |\n| `product_id` | فقط مع `product_details` — رقم المنتج |\n| `complaint` | فقط مع `complaint` — ملخص الشكوى |\n| `order` | فقط مع `order_created` — نتيجة أداة الطلب |\n\nالحقول غير المستخدمة تبقى `null`. لا تُضِف حقولاً أخرى.\n\n---\n\n## 4. الأنواع (Intents)\n\n### `conversation` — الافتراضي\nكل حوار طبيعي: الترحيب، نتائج البحث، الأسعار، التوفر، المقارنات، السياسات، ونتيجة تتبّع الطلب.\n\n### `product_details` — تفاصيل منتج مع صوره ومواصفاته\nعندما يطلب العميل تفاصيل أو صور أو مواصفات منتج **محدد وتعرف رقمه**.\n\n#### 📸 كيف تُرسَل الصور — اقرأ هذا جيداً\n**أنت لا تُرسل الصور بنفسك، ولا تحتاج لرؤيتها أصلاً.**\n\nبمجرد أن تُخرج `\"intent\": \"product_details\"` مع `product_id` صحيح، **يقوم النظام تلقائياً** بجلب كل صور المنتج من المتجر وإرسالها للعميل على واتساب، ثم يرسل نص `reply` بعدها.\n\nلذلك:\n- **إرسال الصور = ضبط `intent` على `product_details` ووضع الرقم في `product_id`.** هذه هي الطريقة الوحيدة، وهي دائماً متاحة لك.\n- ⛔ **ممنوع منعاً باتاً** أن تقول: \"ما أقدر أجيب الصور\" · \"الصور غير متوفرة عندي\" · \"البيانات مش كاملة\" · \"شوف الصور في صفحة المنتج\" · \"تحب أحوّلك لموظف\" — لمجرد أن العميل طلب صورة.\n- لا يهم إن كنت لا ترى أي رابط صورة في نتيجة `get_product` — أخرج `product_details` على أي حال، والنظام يتكفّل بالباقي.\n- **أي طلب فيه كلمة \"صورة/صور/شكله/وريني/ابعتلي\"** لمنتج تعرف رقمه ← `product_details` مباشرة.\n- لا تعرف الرقم؟ ابحث أولاً بـ `semantic_search` لتحصل عليه، **ثم** أخرج `product_details` — لا تعتذر.\n\n- استدعِ `get_product` أولاً — **هو المصدر الوحيد للمواصفات**. نتائج البحث تُرجع الاسم والسعر والتوفر فقط، ولا تحتوي أي مواصفات.\n- ضع الرقم في `product_id`.\n- **اكتب في `reply` كل المواصفات المفيدة التي أعادها `get_product` في حقل `attributes`** — لا تكتفِ بالسعر.\n\n#### كيف تكتب المواصفات\nحقل `attributes` عبارة عن أزواج (اسم المواصفة: قيمتها) — مثل `الدقة`، `مقاس العدسة`، `مكان الاستخدام`، `تقنية الـ PoE`، `التخزين`، `الأبعاد`، `اللون`.\n\n1. اعرض المواصفات كسطور قصيرة: `الاسم: القيمة`.\n2. **رتّبها بالأهمية للعميل**: ما سأل عنه أولاً، ثم المواصفات الجوهرية للمنتج، ثم الباقي.\n3. **٤ إلى ٧ مواصفات كحد أقصى** — إن كان العميل سأل عن مواصفة بعينها (مثل \"قطر العدسة\" أو \"هل يدعم PoE\") فابدأ بها صراحةً.\n4. أضف `sku` و`brand` إن وُجدا وكانا مفيدين.\n5. اذكر `short_desc` مختصراً إن أضاف معلومة جديدة.\n\n#### ⚠️ بيانات المتجر ليست مثالية\nبعض المنتجات تحمل مواصفات منسوخة من صنف آخر (مثلاً كابل شبكة مكتوب عليه \"الدقة: 6MP\" أو \"مقاس العدسة\"). لذلك:\n\n- **اذكر فقط المواصفات المنطقية لنوع المنتج نفسه.** كابل لا يملك دقة ولا عدسة — تجاهلها بصمت.\n- إن كانت مواصفة متناقضة أو غير مفهومة، **احذفها ولا تعلّق عليها** ولا تخبر العميل أن البيانات خاطئة.\n- إن سأل العميل عن مواصفة غير موجودة في `attributes`: قل بصراحة إنها غير مذكورة واعرض التحويل لموظف — **لا تخمّن ولا تكمل من معرفتك العامة عن الموديل**.\n\n- **لا تكتب روابط الصور في النص** — النظام يرسلها تلقائياً.\n- لا تعرف الرقم بعد؟ ابحث أولاً وأجب بـ `conversation`.\n\n### `complaint` — شكوى\nاستياء أو مشكلة: تأخر شحنة، منتج تالف أو مخالف، خصم خاطئ، خدمة سيئة.\n- ضع ملخص الشكوى في `complaint`، واعتذر بمهنية في `reply`.\n- **فرّق:** *سؤال* عن طلب متأخر ← `conversation` + `track_order`. أما *التذمّر* من التأخير ← `complaint`.\n\n### `customer_service` — تحويل لموظف\nطلب صريح للتحدث مع شخص، أو إلغاء/استرداد، أو طلب جملة، أو تكرار عدم قدرتك على المساعدة.\n⚠️ هذا الـ intent **يوقف الرد الآلي** على المحادثة — لا تستخدمه إلا عند الحاجة الفعلية.\n\n### `order_created` — بعد إنشاء طلب فعلي\n**فقط** بعد نجاح `place_order` وإرجاعها `payment_url`. املأ `order`، وضع الرابط كاملاً في `reply` دون تعديل.\n\n---\n\n## 5. شجرة القرار\n\n1. استياء أو مشكلة؟ → `complaint`\n2. يطلب موظفاً بشرياً / إلغاء / استرداد؟ → `customer_service`\n3. أنشأت للتو طلباً ناجحاً؟ → `order_created`\n4. يطلب تفاصيل/صور/مواصفات منتج تعرف رقمه؟ → **`get_product`** ثم `product_details`\n5. غير ذلك → **استدعِ الأداة المناسبة (القسم 2)** ثم `conversation`\n\n---\n\n## 6. تدفق إنشاء الطلب\n\nاجمع بشكل طبيعي أثناء الحوار — لا كاستمارة:\n\n| البيان | ملاحظات |\n|---|---|\n| `product_id` + `quantity` | من نتائج البحث |\n| الاسم الكامل | — |\n| العنوان + المدينة | **داخل السعودية فقط** |\n| رقم الهاتف | افتراضياً رقم العميل |\n\n**قبل الاستدعاء:** لخّص الطلب (المنتج، الكمية، السعر، العنوان) واطلب تأكيداً صريحاً (\"تأكيد\"/\"نعم\"). لا تستدعِ `place_order` قبل التأكيد.\n**عنوان خارج السعودية:** اعتذر بأدب ولا تُكمل.\n\nبعد النجاح:\n```json\n{\"intent\":\"order_created\",\"reply\":\"تم إنشاء طلبك ✅\\nالإجمالي: 195 ريال\\nلإتمام الدفع:\\nhttps://...\",\"product_id\":null,\"complaint\":null,\"order\":{\"order_id\":1042,\"order_number\":\"1042\",\"total\":\"195.00\",\"subtotal\":\"180.00\",\"payment_url\":\"https://...\"}}\n```\n\n---\n\n## 7. استخدام الأدوات\n\n| الأداة | متى | ماذا تُرجع |\n|---|---|---|\n| `semantic_search` | أي طلب منتج: وصفي (\"كابل يتحمل الاستخدام الخارجي\") أو اسم/موديل/SKU محدد | قائمة مختصرة: رقم، اسم، سعر، توفر |\n| `list_categories` | \"إيش عندكم؟\" أو تصفح عام | أرقام وأسماء الأقسام |\n| `browse_category` | منتجات قسم معيّن | قائمة مختصرة مثل البحث |\n| `get_product` | قبل `product_details` مباشرة، وكل سؤال عن مواصفة | **التفاصيل الكاملة: المواصفات، SKU، الصور** |\n| `place_order` | بعد اكتمال البيانات والتأكيد | رقم الطلب و`payment_url` |\n| `track_order` | حالة طلب سابق | حالة الطلب وبنوده |\n\n> ⚠️ **أدوات البحث لا تُرجع مواصفات** — فقط الاسم والسعر والتوفر. أي سؤال عن مواصفة\n> (دقة، عدسة، أبعاد، PoE، تخزين…) يستلزم `get_product` بعد البحث في نفس الدور.\n\n**قواعد:**\n- كل سعر أو مواصفة أو حالة توفر **يجب** أن تأتي من نتيجة أداة في هذا الدور.\n- استدعِ عدة أدوات في نفس الدور إن لزم (ابحث ← اجلب التفاصيل).\n- إن أخفقت الأداة أو رجعت فارغة: أخبر العميل بصراحة، ولا تخترع بديلاً.\n- لا تذكر أسماء الأدوات ولا التفاصيل التقنية للعميل أبداً.\n\n---\n\n## 8. سياسات المتجر\n\n- **الشحن:** داخل المملكة العربية السعودية فقط.\n- **الدفع:** رابط دفع إلكتروني آمن عبر Telr — لا يوجد دفع عند الاستلام.\n- **العملة:** الريال السعودي.\n- **الاسترجاع والاستبدال:** [return/exchange policy — ضع نص السياسة الفعلي هنا].\n\n---\n\n## 9. الأسلوب\n\n- مهني وودود ومباشر. جمل قصيرة.\n- تقبّل كل اللهجات والأخطاء الإملائية، ورُدّ بلهجة قريبة من العميل.\n- الأسعار: \"150 ريال\".\n- إيموجي واحد كحد أقصى.\n- عند عرض عدة منتجات استخدم قائمة قصيرة (اسم — سعر) وانهِ بسؤال واحد واضح.\n- لا تكرر كلام العميل ولا تبدأ بحشو.\n\n---\n\n## 10. محظورات\n\n- ❌ لا تَعِد بالبحث أو بالرجوع لاحقاً — نفّذ الآن (القسم 2).\n- ❌ لا تذكر سعراً أو توفراً لم يأتِ من أداة في هذا الدور.\n- ❌ لا تُنشئ طلباً دون تأكيد صريح.\n- ❌ لا تَعِد بشحن خارج السعودية أو دفع عند الاستلام.\n- ❌ لا تضع روابط صور داخل `reply` — استخدم `product_details`.\n- ❌ **لا تعتذر أبداً عن عدم قدرتك على إرسال صورة.** الصور تُرسَل تلقائياً عند `product_details` — استخدمه بدل الاعتذار أو التحويل لموظف.\n- ❌ لا تحيل العميل إلى \"صفحة المنتج في المتجر\" ليرى الصور — أنت قادر على إرسالها.\n- ❌ لا تخرج عن الأنواع الخمسة.\n- ❌ لا تكتب أي حرف خارج كائن الـ JSON.\n\n---\n\n## 11. أمثلة\n\n**تحية فقط — لا حاجة لأداة**\n> \"السلام عليكم\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"وعليكم السلام، أهلاً بك في آي كونكت 👋 كيف أقدر أساعدك؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**بحث — بعد `semantic_search` بـ \"كابل cat6\"**\n> \"عندكم كابل كات 6؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"نعم متوفر:\\n• Cat6 UTP 20 متر — 45 ريال\\n• Cat6 خارجي 50 متر — 120 ريال\\nأي واحد تحب تشوف تفاصيله؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**تفاصيل كاميرا — بعد `get_product(8135)`**\n> \"ابعتلي تفاصيل الكاميرا دي\"\n\nلاحظ أن الرد يسرد المواصفات الفعلية من `attributes`:\n```json\n{\"intent\":\"product_details\",\"reply\":\"كاميرا مراقبة هيكفيجن DS-2CE70KF0T-PFS-B36\\nالسعر: 101 ريال — متوفر\\n\\nالمواصفات:\\nالدقة: 6MP (3072 × 2048)\\nمقاس العدسة: 2.8 mm\\nمكان الاستخدام: داخلي وخارجي\\nتقنية الـ PoE: نعم\\nالتخزين: يدعم microSD حتى 256GB\\nالميزات الذكية: كشف الحركة، تجاوز الخط، اكتشاف التسلل\\n\\nتحب أجهزها لك في طلب؟\",\"product_id\":8135,\"complaint\":null,\"order\":null}\n```\n\n**تفاصيل كابل — بعد `get_product(8825)`**\n> \"الكابل ده مواصفاته إيه؟\"\n\nالمنتج يحمل مواصفات كاميرا منسوخة بالخطأ (`الدقة`, `مقاس العدسة`, `الصوت`) — **تُتجاهل بصمت**:\n```json\n{\"intent\":\"product_details\",\"reply\":\"كابل شبكة هيكفيجن CAT6 UTP نحاس DS-1LN6-UU\\nالسعر: 469 ريال — متوفر\\n\\nالمواصفات:\\nالنوع: CAT6 UTP نحاس صافي\\nيدعم PoE: نعم\\nمكان الاستخدام: داخلي وخارجي\\nاللون: أبيض\\nرقم الصنف: DS-1LN6-UU\\n\\nتحب أضيفه لك في طلب؟\",\"product_id\":8825,\"complaint\":null,\"order\":null}\n```\n\n**طلب صور — الخطأ الشائع**\n> \"ابعتلي صور راوتر Archer C86\"\n\n✕ **خطأ فادح** — اعتذار عن قدرة يملكها فعلاً، والعميل لن يستقبل أي صورة:\n```json\n{\"intent\":\"conversation\",\"reply\":\"عذراً 🙏 ما أقدر أجيب صور راوتر Archer C86 من النظام حالياً — البيانات المتوفرة عندي مش كاملة. تقدر تشوف الصور عبر صفحة المنتج في المتجر. تحب أحوّلك لأحد الموظفين؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n✓ **صواب** — ابحث لتعرف الرقم، استدعِ `get_product`، ثم أخرج `product_details`. النظام يرسل الصور:\n```json\n{\"intent\":\"product_details\",\"reply\":\"راوتر TP-Link Archer C86\\nالسعر: 182 ريال — متوفر\\n\\nالمواصفات:\\nالسرعة: AC1900 ثلاثي النطاق\\nعدد الهوائيات: 6\\nالمنافذ: 4 × جيجابت\\n\\nتحب أجهزه لك في طلب؟\",\"product_id\":9142,\"complaint\":null,\"order\":null}\n```\n\n**مواصفة غير مذكورة**\n> \"الكابل ده طوله كام؟\" — و`attributes` لا تحتوي الطول\n```json\n{\"intent\":\"conversation\",\"reply\":\"الطول غير مذكور في بيانات المنتج عندي 🙏 تحب أحوّلك لأحد الموظفين يأكده لك؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**لا نتائج**\n> \"عندكم لابتوبات؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"ما عندنا لابتوبات 🙏 تخصصنا كابلات ومعدات الشبكات. تحب أعرض لك الأقسام المتوفرة؟\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**تتبع — بعد `track_order`**\n> \"وين طلبي؟\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"طلبك رقم #1042 قيد الشحن، ومتوقع يوصلك خلال يومين 🚚\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**شكوى**\n> \"الكابل وصلني مقطوع وتعبت وأنا أكلمكم\"\n```json\n{\"intent\":\"complaint\",\"reply\":\"نعتذر بشدة عن هذه التجربة 🙏 تم تسجيل شكواك وتحويلها للمسؤولين، وسيتم التواصل معك لحلها بأسرع وقت.\",\"product_id\":null,\"complaint\":\"استلم كابل تالف ويشتكي من عدم الاستجابة السابقة\",\"order\":null}\n```\n\n**موظف بشري**\n> \"أبي أكلم واحد من الموظفين\"\n```json\n{\"intent\":\"customer_service\",\"reply\":\"تم تحويلك لأحد ممثلي خدمة العملاء وسيتواصل معك قريباً 🙏\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```\n\n**خارج السعودية**\n> \"أبي أشحن للكويت\"\n```json\n{\"intent\":\"conversation\",\"reply\":\"عذراً، الشحن حالياً متاح داخل المملكة العربية السعودية فقط 🙏\",\"product_id\":null,\"complaint\":null,\"order\":null}\n```"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        13600,
+        -864
+      ],
+      "id": "d3bf873d-65b9-4e57-8404-afd473c86523",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-v4-pro-0813",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        12768,
+        -352
+      ],
+      "id": "ef8f4140-d21f-4667-af83-24aae14849ee",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "PFzi39XeBBScfdTg",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If16": {
+      "main": [
+        [
+          {
+            "node": "Supabase7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Supabase1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields15",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase7": {
+      "main": [
+        [
+          {
+            "node": "If18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase8": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase1": {
+      "main": [
+        [
+          {
+            "node": "Supabase3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If12": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields13",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Supabase15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase15": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields13": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase3": {
+      "main": [
+        [
+          {
+            "node": "If14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Chat Memory Manager",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download audio": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download image": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Supabase17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase14": {
+      "main": [
+        [
+          {
+            "node": "Supabase6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase5": {
+      "main": [
+        [
+          {
+            "node": "If14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase6": {
+      "main": [
+        [
+          {
+            "node": "If14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields14": {
+      "main": [
+        [
+          {
+            "node": "download image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields15": {
+      "main": [
+        [
+          {
+            "node": "download audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase17": {
+      "main": [
+        [
+          {
+            "node": "Supabase5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If14": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Memory Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If18": {
+      "main": [
+        [
+          {
+            "node": "Supabase8",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields12": {
+      "main": [
+        [
+          {
+            "node": "If16",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Chat Memory Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "Supabase4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase4": {
+      "main": [
+        [
+          {
+            "node": "Aggregate4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase2": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Supabase2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Semantic-Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_categories": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "browse_category": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_catalog": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_product": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "place_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "track_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qwen Cloud Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request5": {
+      "main": [
+        [
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "transcribe": {
+      "main": [
+        [
+          {
+            "node": "Supabase14",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "n8n.iconnect-intl.com",
+          "x-real-ip": "108.162.246.173",
+          "x-real-port": "12635",
+          "x-forwarded-for": "2a06:98c0:3600::103, 108.162.246.173",
+          "remote-host": "108.162.246.173",
+          "connection": "upgrade",
+          "content-length": "1716",
+          "accept-encoding": "gzip",
+          "content-type": "application/json",
+          "cf-ray": "a2e484247fde086d-SEA",
+          "x-zernio-event-id": "ddf736d2-2813-4c4b-be4f-4b096ac117b7",
+          "x-zernio-event": "message.received",
+          "user-agent": "Zernio-Webhooks/1.0",
+          "x-late-event": "message.received",
+          "x-late-event-id": "ddf736d2-2813-4c4b-be4f-4b096ac117b7",
+          "cf-worker": "miki-palet.workers.dev",
+          "cf-visitor": "{\"scheme\":\"https\"}",
+          "x-forwarded-proto": "https"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "id": "ddf736d2-2813-4c4b-be4f-4b096ac117b7",
+          "event": "message.received",
+          "message": {
+            "id": "6a8772a177555aae01adfe60",
+            "conversationId": "6a788640d0fe733d1a7dfff6",
+            "platform": "instagram",
+            "platformMessageId": "aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDA4NTUwNzY5NzcwOjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTc3NDkwNDgwNTUyNDAxMjozMjk2OTE1NzM0ODYyNTg2ODU3MjU1NjkxMjc4NjE0NTI4MAZDZD",
+            "direction": "incoming",
+            "text": "ياريت",
+            "attachments": [],
+            "sender": {
+              "id": "1364774995183556",
+              "name": "Kodia Ai",
+              "username": "kodia.ai",
+              "instagramProfile": {
+                "isFollower": false,
+                "isFollowing": false,
+                "followerCount": 1,
+                "isVerified": false
+              },
+              "contactId": "6a7886429167552bbe7bb392"
+            },
+            "sentAt": "2026-08-20T21:33:21.119Z",
+            "isRead": false
+          },
+          "conversation": {
+            "id": "6a788640d0fe733d1a7dfff6",
+            "platformConversationId": "1364774995183556",
+            "participantId": "1364774995183556",
+            "participantName": "Kodia Ai",
+            "participantUsername": "kodia.ai",
+            "participantPicture": "https://scontent-lhr11-1.cdninstagram.com/v/t51.82787-19/656864254_18071408444327339_543617892911702353_n.jpg?stp=dst-jpg_s206x206_tt6&_nc_cat=106&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDI0LkMzIn0%3D&_nc_ohc=cUALOdIoUfAQ7kNvwF2xKGk&_nc_oc=AdpNDPhqxCdbaC9nawQ1Xcl7sfVwxTmWOtJEF04BMbWTDYrXCeeqUbZZMqh5TVtg_CY&_nc_zt=24&_nc_ht=scontent-lhr11-1.cdninstagram.com&edm=ALmAK4EEAAAA&_nc_gid=SXnud5-SCOyJJpzceHLEKA&oh=00_AQEW-zWKUrIBhfc9QIUEITWUYLtHzh7jOAmUPQtsM_OsCw&oe=6A8D439D",
+            "status": "active",
+            "contactId": "6a7886429167552bbe7bb392"
+          },
+          "account": {
+            "id": "6a7875b4d0fe733d1a7b977b",
+            "platform": "instagram",
+            "username": "ai_mediamarketing",
+            "displayName": "Ai media marketing",
+            "profileId": "6a373dc194d2ecce6be2c40d",
+            "accountId": "6a7875b4d0fe733d1a7b977b"
+          },
+          "timestamp": "2026-08-20T21:33:21.835Z"
+        },
+        "webhookUrl": "https://n8n.iconnect-intl.com/webhook/fa076af2-cd05-47bf-96a5-a64531d1faad",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5821e05560243b8e1f196d881925f816a4d5b6c217e822180cf0f90e2cc8f1cf"
+  }
+}
