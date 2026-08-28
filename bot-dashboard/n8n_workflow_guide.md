@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، مسار إنشاء الطلبات وحفظها في جدول الطلبات `crm_orders` وظهورها في الداشبورد، ومسار خدمة العملاء مع الإشعارات اللحظية) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، مسار إنشاء الطلبات وحفظها في جدول `crm_orders`، مسار خدمة العملاء مع الإشعارات، وتراكم وحفظ الـ Tags في `crm_clients`) داخل منصة **n8n**.
 
 ---
 
@@ -10,9 +10,9 @@
 2. [الخطوة 2: تحديث الـ System Prompt في عقدة AI Agent](#2-الخطوة-2-تحديث-الـ-system-prompt)
 3. [الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-الذكية-code-in-javascript2)
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
-5. [الخطوة 5: مسار إنشاء الطلب وحفظه في الداشبورد (Order Creation Route & `crm_orders`)](#5-الخطوة-5-مسار-إنشاء-الطلب-وحفظه-في-الداشبورد-order_created) 🛒
+5. [الخطوة 5: مسار إنشاء الطلب وحفظه في الداشبورد (Order Creation Route)](#5-الخطوة-5-مسار-إنشاء-الطلب-وحفظه-في-الداشبورد-order_created) 🛒
 6. [الخطوة 6: مسار خدمة العملاء وإيقاف الرد الآلي (Customer Service & Escalation)](#6-الخطوة-6-مسار-خدمة-العملاء-وإيقاف-الرد-الآلي) 🚨
-7. [الخطوة 7: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار](#7-الخطوة-7-تراكم-وحفظ-الكاتجوريز-tags-في-supabase-بدون-تكرار) 🏷️
+7. [الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) في Supabase بالتفصيل](#7-الخطوة-7-حفظ-وتراكم-الكاتجوريز-tags-في-supabase-بالتفصيل) 🏷️
 
 ---
 
@@ -45,7 +45,7 @@
 
 ## 3. الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)
 
-افتح عقدة **`Code in JavaScript2`** وتأكد من وجود الكود المحدث (يدعم الصيغة المضغوطة ويستنتج الحالات بذكاء):
+افتح عقدة **`Code in JavaScript2`** وتأكد من وجود الكود المحدث:
 
 ```javascript
 // ============================================================================
@@ -244,10 +244,7 @@ flowchart LR
 * **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `messages` مع `sender_type: 'ai'`.
 
 ### 3. تسجيل الطلب في الداشبورد (`Insert CRM Order`):
-هذه العقدة تحفظ بيانات الطلب في جدول `crm_orders` المربوط بصفحة العميل في الداشبورد:
-* **Node Type:** `Supabase`
-* **Operation:** `Create a row` (Insert)
-* **Table:** `crm_orders`
+* **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `crm_orders`
 * **Fields Values:**
   * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
   * `client_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
@@ -269,20 +266,9 @@ flowchart LR
   * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
   * `type` = `order_created`
   * `title` = `=🛒 طلب جديد: {{ $('Code in JavaScript6').item.json.SenderName || 'عميل' }}`
-  * `message` = `=تم إنشاء طلب شراء جديد بقيمة {{ $('Code in JavaScript2').item.json.order?.total || '—' }} ريال (رقم الطلب #{{ $('Code in JavaScript2').item.json.order?.order_number }})`
+  * `message` = `=تم إنشاء طلب شراء جديد بقيمة {{ $('Code in JavaScript2').item.json.order?.total || '—' }} ريال (رقم الطلب #{{ $('Code in JavaScript2').item.json.order?.order_number || '—' }})`
   * `client_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
   * `is_read` = `false`
-
----
-
-## 🖥️ أين يظهر الطلب في الداشبورد؟
-
-1. **في صفحة ملف العميل (`Clients → [اسم العميل] → تبويب Orders`):**
-   * يظهر جدول تفاعلي كامل بالطلبات التي أنشأها العميل مع رقم الطلب `#1042`، القيمة الإجمالية بالريال السعودي، تاريخ الطلب، وحالة الشحن والدفع.
-2. **في رأس الداشبورد (شريط الإشعارات العلوي 🔔):**
-   * يظهر تنبيه فوري بالطلب الجديد مع صوت تنبيه منبثق.
-3. **في شريط المحادثة (Chat View):**
-   * تتحول شارة العميل تلقائياً إلى `Customer` 🛍️ (أخضر).
 
 ---
 
@@ -310,6 +296,9 @@ flowchart LR
 * **Type:** `customer_service`
 * **Title:** `=🚨 طلب خدمة عملاء: {{ $('Code in JavaScript6').item.json.SenderName || 'عميل' }}`
 * **Message:** `={{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف بشري / استفسار خاص' }}`
+* **Client ID:** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+* **Organization ID:** `={{ $('Edit Fields12').item.json.organization_id }}`
+* **Is Read:** `false`
 
 ### 4. إيقاف الرد الآلي للعميل (`Disable AI Bot`):
 * **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `contacts` $\rightarrow$ `ai_enabled = false`.
@@ -319,29 +308,64 @@ flowchart LR
 
 ---
 
-## 7. الخطوة 7: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار 🏷️
+## 7. الخطوة 7: حفظ وتراكم الكاتجوريز (Tags) في Supabase بالتفصيل 🏷️
 
-في مسار الرد العادي، لدمج كاتجوري اهتمام العميل الجديد مع الـ Tags السابقة بدون تكرار:
+في مسار الرد العادي (`conversation` و `product_details`)، بعد حفظ الرسالة في `messages` (`Create a row`):
 
+```mermaid
+flowchart LR
+    A["Create a row (حفظ رسالة الـ AI)"] --> B["1. Get CRM Client (Supabase: جلب الـ Tags السابقة)"]
+    B --> C["2. Merge Tags (Code: دمج الكاتجوري الجديد بدون تكرار)"]
+    C --> D["3. Update CRM Client Tags (Supabase: تحديث crm_clients)"]
+```
+
+### العقدة 1: جلب الـ Tags الحالية للعميل (`Get CRM Client`)
+* **Node Type:** `Supabase`
+* **Operation:** `Get an item`
+* **Table:** `crm_clients`
+* **Filter Conditions:**
+  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+* **Always Output Data:** مفعل (`true`)
+
+---
+
+### العقدة 2: كود دمج الكاتجوري بدون تكرار (`Merge Tags`)
+* **Node Type:** `Code` (JavaScript)
+* **Code:**
 ```javascript
-const currentTags = $('Get Client').item.json?.tags || [];
-const newCategory = $('Code in JavaScript2').item.json?.category;
-const newStatus = $('Code in JavaScript2').item.json?.client_status || 'new';
+// 1. جلب الـ Tags الحالية من Supabase
+const client = $input.first()?.json || {};
+const existingTags = Array.isArray(client.tags) ? client.tags : [];
 
-let updatedTags = Array.isArray(currentTags) ? [...currentTags] : [];
+// 2. قراءة الكاتجوري والحالة الجديدة من مخرج الـ AI Agent
+const newCategory = $('Code in JavaScript2').item.json?.category || $('Code in JavaScript2').item.json?.detected_category;
+const newStatus = $('Code in JavaScript2').item.json?.client_status || (newCategory ? 'interested' : (client.client_type || 'new'));
 
+// 3. الدمج بدون تكرار
+let updatedTags = [...existingTags];
 if (newCategory && typeof newCategory === 'string' && !updatedTags.includes(newCategory)) {
   updatedTags.push(newCategory);
 }
 
 return [{
   json: {
-    ...$input.first().json,
-    merged_tags: updatedTags,
-    client_status: newStatus
+    client_id: client.id,
+    contact_id: $('Edit Fields4').item.json.contact_uuid,
+    updated_tags: updatedTags,
+    client_status: newStatus,
+    has_category: Boolean(newCategory)
   }
 }];
 ```
-ثم تحديث جدول `crm_clients` بـ:
-* `client_type` = `={{ $json.client_status }}`
-* `tags` = `={{ $json.merged_tags }}`
+
+---
+
+### العقدة 3: حفظ البيانات المحدثة في الداشبورد (`Update CRM Client Tags`)
+* **Node Type:** `Supabase`
+* **Operation:** `Update`
+* **Table:** `crm_clients`
+* **Filter Conditions:**
+  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+* **Fields to Update:**
+  * `client_type` = `={{ $json.client_status }}`
+  * `tags` = `={{ $json.updated_tags }}`

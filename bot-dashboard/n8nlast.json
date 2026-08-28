@@ -2830,6 +2830,90 @@
           "name": "Supabase account"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "crm_clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        15696,
+        120
+      ],
+      "id": "get-crm-client-node-id",
+      "name": "Get CRM Client",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. جلب الـ Tags الحالية من Supabase\nconst client = $input.first()?.json || {};\nconst existingTags = Array.isArray(client.tags) ? client.tags : [];\n\n// 2. قراءة الكاتجوري والحالة الجديدة من مخرج الـ AI Agent\nconst newCategory = $('Code in JavaScript2').item.json?.category || $('Code in JavaScript2').item.json?.detected_category;\nconst newStatus = $('Code in JavaScript2').item.json?.client_status || (newCategory ? 'interested' : (client.client_type || 'new'));\n\n// 3. الدمج بدون تكرار\nlet updatedTags = [...existingTags];\nif (newCategory && typeof newCategory === 'string' && !updatedTags.includes(newCategory)) {\n  updatedTags.push(newCategory);\n}\n\nreturn [{\n  json: {\n    client_id: client.id,\n    contact_id: $('Edit Fields4').item.json.contact_uuid,\n    updated_tags: updatedTags,\n    client_status: newStatus,\n    has_category: Boolean(newCategory)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        15912,
+        120
+      ],
+      "id": "merge-tags-code-node-id",
+      "name": "Merge Tags"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "crm_clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_type",
+              "fieldValue": "={{ $json.client_status }}"
+            },
+            {
+              "fieldId": "tags",
+              "fieldValue": "={{ $json.updated_tags }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        16128,
+        120
+      ],
+      "id": "update-crm-tags-node-id",
+      "name": "Update CRM Client Tags",
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
     }
   ],
   "connections": {
@@ -3592,7 +3676,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request6",
+            "node": "Get CRM Client",
             "type": "main",
             "index": 0
           }
@@ -3714,6 +3798,39 @@
         [
           {
             "node": "Update Client to Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Get CRM Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get CRM Client": {
+      "main": [
+        [
+          {
+            "node": "Merge Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Tags": {
+      "main": [
+        [
+          {
+            "node": "Update CRM Client Tags",
             "type": "main",
             "index": 0
           }
