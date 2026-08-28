@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://uorfbqhsaxoofzqouqsj.supabase.co wss://uorfbqhsaxoofzqouqsj.supabase.co; frame-ancestors 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; media-src 'self' https: data: blob:; connect-src 'self' https://uorfbqhsaxoofzqouqsj.supabase.co wss://uorfbqhsaxoofzqouqsj.supabase.co https: wss:; frame-ancestors 'self';",
           },
         ],
       },

@@ -12,6 +12,7 @@ import DoneIcon from '@mui/icons-material/Done';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import AudioPlayer from './AudioPlayer';
 
 interface MessageBubbleProps {
   message: Message;
@@ -163,14 +164,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
 
       case 'audio':
         return (
-          <>
-            <Box component="audio" controls src={attachment_url || undefined} sx={{ width: '100%', maxWidth: '250px', mt: 0.5 }} />
-            {attachment_metadata?.duration_seconds && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
-                🎤 {formatDuration(attachment_metadata.duration_seconds)}
-              </Typography>
-            )}
-          </>
+          <AudioPlayer
+            src={attachment_url}
+            durationSeconds={attachment_metadata?.duration_seconds}
+            isUser={isUser}
+          />
         );
 
       case 'video':
