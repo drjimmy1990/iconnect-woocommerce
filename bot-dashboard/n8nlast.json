@@ -2643,7 +2643,7 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        15696,
+        15912,
         -50
       ],
       "id": "order-update-client-node-id",
@@ -2690,7 +2690,7 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        15912,
+        16128,
         -50
       ],
       "id": "order-notif-node-id",
@@ -2769,6 +2769,61 @@
       ],
       "id": "cs-update-client-support-node-id",
       "name": "Update Client to Support",
+      "credentials": {
+        "supabaseApi": {
+          "id": "7jTeYJqCdduzJ64Y",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "crm_orders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "organization_id",
+              "fieldValue": "={{ $('Edit Fields12').item.json.organization_id }}"
+            },
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $('Edit Fields4').item.json.contact_uuid }}"
+            },
+            {
+              "fieldId": "order_number",
+              "fieldValue": "={{ $('Code in JavaScript2').item.json.order?.order_number }}"
+            },
+            {
+              "fieldId": "ecommerce_order_id",
+              "fieldValue": "={{ $('Code in JavaScript2').item.json.order?.order_id || $('Code in JavaScript2').item.json.order?.order_number }}"
+            },
+            {
+              "fieldId": "total",
+              "fieldValue": "={{ parseFloat($('Code in JavaScript2').item.json.order?.total || 0) }}"
+            },
+            {
+              "fieldId": "currency",
+              "fieldValue": "SAR"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "pending"
+            },
+            {
+              "fieldId": "order_date",
+              "fieldValue": "={{ DateTime.now().toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        15696,
+        -50
+      ],
+      "id": "order-insert-crm-orders-id",
+      "name": "Insert CRM Order",
       "credentials": {
         "supabaseApi": {
           "id": "7jTeYJqCdduzJ64Y",
@@ -3614,7 +3669,7 @@
       "main": [
         [
           {
-            "node": "Update Client to Customer",
+            "node": "Insert CRM Order",
             "type": "main",
             "index": 0
           }
@@ -3648,6 +3703,17 @@
         [
           {
             "node": "Update Client to Support",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert CRM Order": {
+      "main": [
+        [
+          {
+            "node": "Update Client to Customer",
             "type": "main",
             "index": 0
           }

@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، مسار إنشاء الطلبات وإرسال رابط الدفع، ومسار خدمة العملاء مع الإشعارات اللحظية) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio، توفير الـ Tokens عبر الـ JSON الذكي، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، مسار إنشاء الطلبات وحفظها في جدول الطلبات `crm_orders` وظهورها في الداشبورد، ومسار خدمة العملاء مع الإشعارات اللحظية) داخل منصة **n8n**.
 
 ---
 
@@ -10,7 +10,7 @@
 2. [الخطوة 2: تحديث الـ System Prompt في عقدة AI Agent](#2-الخطوة-2-تحديث-الـ-system-prompt)
 3. [الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-الذكية-code-in-javascript2)
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
-5. [الخطوة 5: مسار إنشاء الطلب ورابط الدفع (Order Creation Route)](#5-الخطوة-5-مسار-إنشاء-الطلب-ورابط-الدفع-order_created) 🛒
+5. [الخطوة 5: مسار إنشاء الطلب وحفظه في الداشبورد (Order Creation Route & `crm_orders`)](#5-الخطوة-5-مسار-إنشاء-الطلب-وحفظه-في-الداشبورد-order_created) 🛒
 6. [الخطوة 6: مسار خدمة العملاء وإيقاف الرد الآلي (Customer Service & Escalation)](#6-الخطوة-6-مسار-خدمة-العملاء-وإيقاف-الرد-الآلي) 🚨
 7. [الخطوة 7: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار](#7-الخطوة-7-تراكم-وحفظ-الكاتجوريز-tags-في-supabase-بدون-تكرار) 🏷️
 
@@ -218,12 +218,12 @@ return ok(intent, reply, {
 
 * **Output 0 (`conversation`):** المحادثة العادية والردود السريعة.
 * **Output 1 (`product_details`):** إرسال صور ومواصفات المنتج تلقائياً.
-* **Output 2 (`order_created`):** إرسال رابط الدفع وتأكيد الطلب وتحديث العميل إلى Customer.
+* **Output 2 (`order_created`):** إرسال رابط الدفع، تسجيل الطلب في `crm_orders`، وتحديث العميل إلى Customer.
 * **Output 3 (`customer_service` / `complaint`):** إيقاف البوت والتحويل لخدمة العملاء وتنبيه الداشبورد.
 
 ---
 
-## 5. الخطوة 5: مسار إنشاء الطلب ورابط الدفع (Order Creation Route) 🛒
+## 5. الخطوة 5: مسار إنشاء الطلب وحفظه في الداشبورد (`order_created`) 🛒
 
 عندما يخرج الـ Intent كـ **`order_created`** (المسار 2 من `Switch1`):
 
@@ -231,46 +231,39 @@ return ok(intent, reply, {
 flowchart LR
     A["Switch1 (order_created)"] --> B["1. Send Order Message (Zernio API)"]
     B --> C["2. Save Order Message (Supabase: messages)"]
-    C --> D["3. Update Client to Customer (crm_clients: client_type=customer)"]
-    D --> E["4. Create Order Notification (system_notifications) 🔔"]
+    C --> D["3. Insert CRM Order (Supabase: crm_orders) 📦"]
+    D --> E["4. Update Client to Customer (crm_clients: client_type=customer)"]
+    E --> F["5. Create Order Notification (system_notifications) 🔔"]
 ```
 
-### 1. إرسال رسالة الطلب ورابط الدفع (`Send Order Message`):
-* **Node Type:** `HTTP Request`
-* **Method:** `POST`
-* **URL:**
-  ```text
-  https://api.zernio.com/v1/inbox/conversations/{{ $('Webhook').item.json.body.conversation.id }}/messages
-  ```
-* **Headers:**
-  * `Authorization`: `Bearer YOUR_ZERNIO_API_KEY`
-  * `Content-Type`: `application/json`
-* **Body (JSON):**
-  ```json
-  {
-    "accountId": "={{ $('Webhook').item.json.body.account.accountId }}",
-    "message": "={{ $('Switch1').item.json.reply }}"
-  }
-  ```
+### 1. إرسال رسالة الطلب ورابط الدفع للعميل (`Send Order Message`):
+* **Node Type:** `HTTP Request` $\rightarrow$ `POST` إلى Zernio Messages
+* **Message:** `={{ $('Switch1').item.json.reply }}`
 
 ### 2. حفظ الرسالة في جدول الرسائل (`Save Order Message`):
-* **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `messages`
-* **Fields:**
-  * `contact_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
-  * `message_platform_id` = `={{ $json.data?.messageId || $json.data?.id }}`
-  * `sender_type` = `ai`
-  * `content_type` = `text`
-  * `text_content` = `={{ $('Switch1').item.json.reply }}`
-  * `platform_timestamp` = `={{ DateTime.now().toISO() }}`
-  * `channel_id` = `={{ $('Edit Fields12').item.json.channel_id }}`
-  * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
+* **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `messages` مع `sender_type: 'ai'`.
 
-### 3. ترقية حالة العميل إلى مشتري (`Update Client to Customer`):
+### 3. تسجيل الطلب في الداشبورد (`Insert CRM Order`):
+هذه العقدة تحفظ بيانات الطلب في جدول `crm_orders` المربوط بصفحة العميل في الداشبورد:
+* **Node Type:** `Supabase`
+* **Operation:** `Create a row` (Insert)
+* **Table:** `crm_orders`
+* **Fields Values:**
+  * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
+  * `client_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
+  * `order_number` = `={{ $('Code in JavaScript2').item.json.order?.order_number }}`
+  * `ecommerce_order_id` = `={{ $('Code in JavaScript2').item.json.order?.order_id || $('Code in JavaScript2').item.json.order?.order_number }}`
+  * `total` = `={{ parseFloat($('Code in JavaScript2').item.json.order?.total || 0) }}`
+  * `currency` = `SAR`
+  * `status` = `pending`
+  * `order_date` = `={{ DateTime.now().toISO() }}`
+
+### 4. ترقية حالة العميل إلى مشتري (`Update Client to Customer`):
 * **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `crm_clients`
 * **Filter:** `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
 * **Field:** `client_type` = `customer`
 
-### 4. إرسال إشعار فوري للداشبورد بالطلب الجديد (`Create Order Notification`):
+### 5. إرسال إشعار فوري للداشبورد بالطلب الجديد (`Create Order Notification`):
 * **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `system_notifications`
 * **Fields:**
   * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
@@ -279,6 +272,17 @@ flowchart LR
   * `message` = `=تم إنشاء طلب شراء جديد بقيمة {{ $('Code in JavaScript2').item.json.order?.total || '—' }} ريال (رقم الطلب #{{ $('Code in JavaScript2').item.json.order?.order_number }})`
   * `client_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
   * `is_read` = `false`
+
+---
+
+## 🖥️ أين يظهر الطلب في الداشبورد؟
+
+1. **في صفحة ملف العميل (`Clients → [اسم العميل] → تبويب Orders`):**
+   * يظهر جدول تفاعلي كامل بالطلبات التي أنشأها العميل مع رقم الطلب `#1042`، القيمة الإجمالية بالريال السعودي، تاريخ الطلب، وحالة الشحن والدفع.
+2. **في رأس الداشبورد (شريط الإشعارات العلوي 🔔):**
+   * يظهر تنبيه فوري بالطلب الجديد مع صوت تنبيه منبثق.
+3. **في شريط المحادثة (Chat View):**
+   * تتحول شارة العميل تلقائياً إلى `Customer` 🛍️ (أخضر).
 
 ---
 
@@ -297,30 +301,21 @@ flowchart LR
 
 ### 1. إرسال رسالة التحويل للعميل (`HTTP Request8`):
 * **Node Type:** `HTTP Request` $\rightarrow$ `POST` إلى Zernio Messages endpoint.
-* **Message:** `={{ $('Switch1').item.json.reply }}`
 
 ### 2. حفظ الرسالة في جدول الرسائل (`Create a row3`):
 * **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `messages` مع `sender_type: 'ai'`.
 
 ### 3. إرسال التنبيه اللحظي للداشبورد (`Create a row4`):
 * **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `system_notifications`
-* **Fields:**
-  * `organization_id` = `={{ $('Edit Fields12').item.json.organization_id }}`
-  * `type` = `customer_service`
-  * `title` = `=🚨 طلب خدمة عملاء: {{ $('Code in JavaScript6').item.json.SenderName || 'عميل' }}`
-  * `message` = `={{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف بشري / استفسار خاص' }}`
-  * `client_id` = `={{ $('Edit Fields4').item.json.contact_uuid }}`
-  * `is_read` = `false`
+* **Type:** `customer_service`
+* **Title:** `=🚨 طلب خدمة عملاء: {{ $('Code in JavaScript6').item.json.SenderName || 'عميل' }}`
+* **Message:** `={{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف بشري / استفسار خاص' }}`
 
 ### 4. إيقاف الرد الآلي للعميل (`Disable AI Bot`):
-* **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `contacts`
-* **Filter:** `id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Field:** `ai_enabled` = `false`
+* **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `contacts` $\rightarrow$ `ai_enabled = false`.
 
 ### 5. تحديث حالة العميل إلى Support (`Update Client to Support`):
-* **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `crm_clients`
-* **Filter:** `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Field:** `client_type` = `support`
+* **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `crm_clients` $\rightarrow$ `client_type = 'support'`.
 
 ---
 
