@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، خفض استهلاك الـ Tokens عبر الـ JSON الذكي المضغوط، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، أقصى توفير للـ Tokens بحقلين فقط في المحادثة العادية، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
 
 ---
 
@@ -44,10 +44,6 @@
   }
   ```
 
-> 📌 **مميزات Zernio Typing:**
-> * يظهر للعميل في Instagram و WhatsApp و Messenger فوراً.
-> * الـ Endpoint آمن (`best-effort`) ويعيد كود `200` مع `{ "success": true }` دون تعطيل الورك فلو في حال كان العميل غير متصل.
-
 ---
 
 ### 🌐 الخيار الثاني: عبر Meta / Instagram Graph API المباشر
@@ -77,21 +73,23 @@
    📄 **[system_message.txt](file:///c:/Users/LOQ/Desktop/CLI/emirates%20mostafa/woocommerce/bot-dashboard/system_message.txt)**
 4. الصق المحتوى في حقل **`System Message`** واضغط **Save**.
 
-> 💡 **مزايا البرومبت المحدث (Prompt Engineering Optimization):**
-> * **توفير حتى 50% من الـ Tokens:** إيقاف توليد الحقول الفارغة (`null`) في الردود العادية (يتم إخراج `intent`, `reply`, `client_status` فقط في المحادثات العادية، وإضافة `category` أو `product_id` أو `complaint` أو `order` عند الحاجة إليها فقط).
-> * **شجرة التصنيفات الـ 11 الرسمية (`category`).**
-> * **الحالات الـ 6 الإلزامية للتحويل لخدمة العملاء.**
+> 💡 **مزايا البرومبت المحدث (Ultra-Compact Token Optimization):**
+> * **توليد حقلين فقط في 85% من المحادثات العادية (`intent` و `reply` فقط!):** تم الاستغناء تماماً عن إخراج `client_status: "new"` لأن العميل ينشأ بحالة `new` في قاعدة البيانات افتراضياً.
+> * **إخراج الحقول الإضافية عند تغيير الحالة فقط:**
+>   * عند الاهتمام بمنتج/كاتجوري $\rightarrow$ يخرج `"category": "..."`.
+>   * عند إنشاء طلب $\rightarrow$ يخرج `"client_status": "customer"`.
+>   * عند الشكوى والدعم $\rightarrow$ يخرج `"client_status": "support"`.
 
 ---
 
 ## 3. الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)
 
-افتح عقدة **`Code in JavaScript2`** (التي تقع بين `AI Agent` و `Switch1`) واستبدل الكود الموجود فيها بهذا الكود المرن والمحصّن:
+افتح عقدة **`Code in JavaScript2`** واستبدل الكود الموجود فيها بهذا الكود الذكي:
 
 ```javascript
 // ============================================================================
-// Parse AI Agent Output — Optimized Compact Schema
-// Compatible with both Compact and Full Output Contracts
+// Parse AI Agent Output — Ultra-Compact Schema
+// Automatically infers missing keys and maps client_status smartly
 // ============================================================================
 
 const VALID_INTENTS = [
@@ -225,17 +223,17 @@ if (typeof rawCategory === 'string' && rawCategory.trim()) {
   if (matched) detectedCategory = matched;
 }
 
-// مطابقة حالة العميل
+// استنتاج حالة العميل تلقائياً بذكاء إذا لم يرسلها الـ Agent
 let clientStatus = 'new';
 if (typeof parsed.client_status === 'string' && parsed.client_status.trim()) {
   const s = parsed.client_status.trim().toLowerCase();
   if (VALID_CLIENT_STATUSES.includes(s)) clientStatus = s;
-}
-
-if (!clientStatus || clientStatus === 'new') {
+} else {
+  // الاستنتاج التلقائي لتوفير الـ Tokens
   if (detectedCategory || intent === 'product_details') clientStatus = 'interested';
-  if (intent === 'order_created') clientStatus = 'customer';
-  if (intent === 'complaint' || intent === 'customer_service') clientStatus = 'support';
+  else if (intent === 'order_created') clientStatus = 'customer';
+  else if (intent === 'complaint' || intent === 'customer_service') clientStatus = 'support';
+  else clientStatus = 'new';
 }
 
 // حراس الأمان (Guards)
@@ -299,16 +297,16 @@ return ok(intent, reply, {
 
 ## 6. الخطوة 6: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار
 
-لكي تتراكم اهتمامات العميل تلقائياً في `crm_clients.tags` (مثلاً: إذا سأل عن لابتوب ثم سأل عن كاميرا، يصبح لديه الاثنان معاً دون تكرار):
+لكي تتراكم اهتمامات العميل تلقائياً في `crm_clients.tags`:
 
 ### 1. في عقدة إعداد البيانات قبل تحديث Supabase:
-أضف عقدة **`Code`** (أو داخل تعبير العقدة) لدمج الكاتجوري الجديد مع الـ Tags السابقة:
+أضف عقدة **`Code`** لدمج الكاتجوري الجديد مع الـ Tags السابقة:
 
 ```javascript
 // جلب الـ Tags الحالية للعميل من العقدة السابقة في الـ Workflow
-const currentTags = $('Supabase15').item.json?.tags || $('Get Client').item.json?.tags || [];
+const currentTags = $('Get Client').item.json?.tags || [];
 const newCategory = $('Code in JavaScript2').item.json?.category;
-const newStatus = $('Code in JavaScript2').item.json?.client_status || 'interested';
+const newStatus = $('Code in JavaScript2').item.json?.client_status || 'new';
 
 let updatedTags = Array.isArray(currentTags) ? [...currentTags] : [];
 
@@ -333,6 +331,3 @@ return [{
 * **Fields to Update:**
   * `client_type` = `={{ $json.client_status }}`
   * `tags` = `={{ $json.merged_tags }}`
-
-> 🌟 **النتيجة:**
-> في الداشبورد، سيظهر للعميل جميع وسومه واهتماماته جنباً إلى جنب كشارات ملونة (مثال: `💻 Computers & Computing` و `📹 CCTV & Surveillance`) بدقة متناهية ودون أي تكرار!
