@@ -22,6 +22,27 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+/**
+ * Returns a proxy URL for external CDNs (like Meta/Instagram lookaside.fbsbx.com)
+ * that enforce hotlinking / referrer restrictions.
+ */
+function resolveAudioUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // If it's already a relative URL or blob or data URI, return as-is
+  if (url.startsWith('/') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  // If from Meta/Instagram CDNs, use the server-side media proxy to avoid hotlink/referrer 403 blocks
+  if (
+    url.includes('lookaside.fbsbx.com') ||
+    url.includes('fbcdn.net') ||
+    url.includes('cdninstagram.com')
+  ) {
+    return `/api/media-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   src,
   durationSeconds,
@@ -35,6 +56,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [hasError, setHasError] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(() => resolveAudioUrl(src));
 
   useEffect(() => {
     if (durationSeconds && durationSeconds > 0) {
@@ -48,21 +70,28 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setCurrentTime(0);
     setHasError(!src);
     setIsBuffering(false);
+    setCurrentSrc(resolveAudioUrl(src));
   }, [src]);
 
   const togglePlay = useCallback(() => {
-    if (!audioRef.current || !src || hasError) return;
+    if (!audioRef.current || !currentSrc) return;
 
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      setHasError(false);
       audioRef.current.play().catch((err) => {
-        console.warn('Audio playback failed:', err);
-        setHasError(true);
+        console.warn('Audio playback error, attempting proxy fallback:', err);
+        if (src && currentSrc !== `/api/media-proxy?url=${encodeURIComponent(src)}`) {
+          // Attempt proxy fallback
+          setCurrentSrc(`/api/media-proxy?url=${encodeURIComponent(src)}`);
+        } else {
+          setHasError(true);
+        }
         setIsPlaying(false);
       });
     }
-  }, [isPlaying, src, hasError]);
+  }, [isPlaying, currentSrc, src]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current && !isSeeking) {
@@ -76,6 +105,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setDuration(audioRef.current.duration);
       }
       setHasError(false);
+      setIsBuffering(false);
     }
   };
 
@@ -102,6 +132,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   };
 
+  const handleError = () => {
+    // If direct load failed and we haven't tried the proxy yet, switch to proxy
+    if (src && currentSrc !== `/api/media-proxy?url=${encodeURIComponent(src)}`) {
+      setCurrentSrc(`/api/media-proxy?url=${encodeURIComponent(src)}`);
+    } else {
+      setHasError(true);
+      setIsBuffering(false);
+      setIsPlaying(false);
+    }
+  };
+
   if (!src) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, color: 'text.secondary' }}>
@@ -124,33 +165,30 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       }}
     >
       {/* Hidden Native Audio Element */}
-      <audio
-        ref={audioRef}
-        src={src}
-        preload="metadata"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => {
-          setIsPlaying(false);
-          setCurrentTime(0);
-        }}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => setIsBuffering(false)}
-        onError={() => {
-          setHasError(true);
-          setIsBuffering(false);
-          setIsPlaying(false);
-        }}
-      />
+      {currentSrc && (
+        <audio
+          ref={audioRef}
+          src={currentSrc}
+          preload="metadata"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            setCurrentTime(0);
+          }}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onWaiting={() => setIsBuffering(true)}
+          onPlaying={() => setIsBuffering(false)}
+          onError={handleError}
+        />
+      )}
 
       {/* Main Player Row */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
         {/* Play/Pause / Buffering Button */}
         <IconButton
           onClick={togglePlay}
-          disabled={hasError}
           size="small"
           sx={{
             bgcolor: isUser ? 'primary.main' : 'primary.dark',
@@ -160,10 +198,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             flexShrink: 0,
             '&:hover': {
               bgcolor: isUser ? 'primary.dark' : 'primary.main',
-            },
-            '&.Mui-disabled': {
-              bgcolor: 'action.disabledBackground',
-              color: 'action.disabled',
             },
           }}
         >
@@ -183,7 +217,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             value={currentTime}
             min={0}
             max={duration > 0 ? duration : 100}
-            disabled={hasError || duration === 0}
+            disabled={hasError && duration === 0}
             onChange={handleSeekChange}
             onChangeCommitted={handleSeekCommitted}
             onMouseDown={() => setIsSeeking(true)}
@@ -255,7 +289,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <GraphicEqIcon sx={{ fontSize: 14, color: 'error.main' }} />
             <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
-              Audio stream error
+              Direct audio playback error
             </Typography>
           </Box>
           <Link
@@ -272,7 +306,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               fontWeight: 600,
             }}
           >
-            Open <OpenInNewIcon sx={{ fontSize: 12 }} />
+            Open in new tab <OpenInNewIcon sx={{ fontSize: 12 }} />
           </Link>
         </Box>
       )}
