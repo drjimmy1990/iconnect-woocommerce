@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، خفض استهلاك الـ Tokens عبر الـ JSON الذكي المضغوط، تصنيف الكاتجوريز الـ 11، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، خفض استهلاك الـ Tokens عبر الـ JSON الذكي المضغوط، تصنيف وتراكم الكاتجوريز الـ 11 في الـ Tags، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
 
 ---
 
@@ -11,7 +11,7 @@
 3. [الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-الذكية-code-in-javascript2)
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
 5. [الخطوة 5: مسار خدمة العملاء وإيقاف الرد الآلي (Customer Service & Escalation)](#5-الخطوة-5-مسار-خدمة-العملاء-وإيقاف-الرد-الآلي)
-6. [الخطوة 6: تحديث تصنيف الاهتمامات (Categories & Tags) في Supabase](#6-الخطوة-6-تحديث-تصنيف-الاهتمامات-في-supabase)
+6. [الخطوة 6: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار](#6-الخطوة-6-تراكم-وحفظ-الكاتجوريز-tags-في-supabase-بدون-تكرار)
 
 ---
 
@@ -43,6 +43,10 @@
     "accountId": "={{ $json.accountId || $json.account_id || $json.data?.accountId }}"
   }
   ```
+
+> 📌 **مميزات Zernio Typing:**
+> * يظهر للعميل في Instagram و WhatsApp و Messenger فوراً.
+> * الـ Endpoint آمن (`best-effort`) ويعيد كود `200` مع `{ "success": true }` دون تعطيل الورك فلو في حال كان العميل غير متصل.
 
 ---
 
@@ -293,12 +297,42 @@ return ok(intent, reply, {
 
 ---
 
-## 6. الخطوة 6: تحديث تصنيف الاهتمامات (Categories & Tags) في Supabase
+## 6. الخطوة 6: تراكم وحفظ الكاتجوريز (Tags) في Supabase بدون تكرار
 
-لتسجيل كاتجوري اهتمام العميل تلقائياً في `crm_clients.tags`:
+لكي تتراكم اهتمامات العميل تلقائياً في `crm_clients.tags` (مثلاً: إذا سأل عن لابتوب ثم سأل عن كاميرا، يصبح لديه الاثنان معاً دون تكرار):
 
-* في مسار الرد العادي، أضف عقدة **`Supabase`** (نوع `Update` على جدول `crm_clients`):
-* **Filter:** `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+### 1. في عقدة إعداد البيانات قبل تحديث Supabase:
+أضف عقدة **`Code`** (أو داخل تعبير العقدة) لدمج الكاتجوري الجديد مع الـ Tags السابقة:
+
+```javascript
+// جلب الـ Tags الحالية للعميل من العقدة السابقة في الـ Workflow
+const currentTags = $('Supabase15').item.json?.tags || $('Get Client').item.json?.tags || [];
+const newCategory = $('Code in JavaScript2').item.json?.category;
+const newStatus = $('Code in JavaScript2').item.json?.client_status || 'interested';
+
+let updatedTags = Array.isArray(currentTags) ? [...currentTags] : [];
+
+// دمج الكاتجوري الجديد إذا كان موجوداً وغير مكرر
+if (newCategory && typeof newCategory === 'string' && !updatedTags.includes(newCategory)) {
+  updatedTags.push(newCategory);
+}
+
+return [{
+  json: {
+    ...$input.first().json,
+    merged_tags: updatedTags,
+    client_status: newStatus
+  }
+}];
+```
+
+### 2. في عقدة `Supabase` (نوع Update على جدول `crm_clients`):
+* **Table:** `crm_clients`
+* **Filter Conditions:**
+  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
 * **Fields to Update:**
-  * `client_type` = `={{ $('Code in JavaScript2').item.json.client_status }}`
-  * إذا كان `detected_category` متوفراً وغير فارغ: دمج الكاتجوري داخل مصفوفة `tags`.
+  * `client_type` = `={{ $json.client_status }}`
+  * `tags` = `={{ $json.merged_tags }}`
+
+> 🌟 **النتيجة:**
+> في الداشبورد، سيظهر للعميل جميع وسومه واهتماماته جنباً إلى جنب كشارات ملونة (مثال: `💻 Computers & Computing` و `📹 CCTV & Surveillance`) بدقة متناهية ودون أي تكرار!
