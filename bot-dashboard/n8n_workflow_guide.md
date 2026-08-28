@@ -1,6 +1,6 @@
 # دليل تطبيق وتحديث ورك فلو n8n (n8n Workflow Guide)
 
-هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، تصنيف الكاتجوريز الـ 11، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
+هذا الدليل يشرح لك خطوة بخطوة كل ما تحتاجه لتطبيق الميزات الجديدة (مؤشر الكتابة Typing Indicator عبر Zernio و Meta، خفض استهلاك الـ Tokens عبر الـ JSON الذكي المضغوط، تصنيف الكاتجوريز الـ 11، وحالات خدمة العملاء والتحويل لموظف) داخل منصة **n8n**.
 
 ---
 
@@ -8,7 +8,7 @@
 
 1. [الخطوة 1: إضافة مؤشر الكتابة (Typing Indicator) عبر Zernio أو Meta API](#1-الخطوة-1-إضافة-مؤشر-الكتابة-typing-indicator)
 2. [الخطوة 2: تحديث الـ System Prompt في عقدة AI Agent](#2-الخطوة-2-تحديث-الـ-system-prompt)
-3. [الخطوة 3: كود عقدة المعالجة (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-code-in-javascript2)
+3. [الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)](#3-الخطوة-3-كود-عقدة-المعالجة-الذكية-code-in-javascript2)
 4. [الخطوة 4: توجيه مسارات الـ Switch (Switch1 Routing)](#4-الخطوة-4-توجيه-مسارات-الـ-switch)
 5. [الخطوة 5: مسار خدمة العملاء وإيقاف الرد الآلي (Customer Service & Escalation)](#5-الخطوة-5-مسار-خدمة-العملاء-وإيقاف-الرد-الآلي)
 6. [الخطوة 6: تحديث تصنيف الاهتمامات (Categories & Tags) في Supabase](#6-الخطوة-6-تحديث-تصنيف-الاهتمامات-في-supabase)
@@ -17,7 +17,7 @@
 
 ## 1. الخطوة 1: إضافة مؤشر الكتابة (Typing Indicator)
 
-الهدف من هذه العقدة هو إرسال إشعار فوري للعميل في إنستجرام/واتساب/ماسنجر بأن البوت **"يكتب الآن... / Typing..."** بمجرد استقبال الرسالة، لكي لا يشعر العميل ببطء أثناء قيام الذكاء الاصطناعي بالبحث والمعالجة وقراءة قواعد البيانات.
+الهدف من هذه العقدة هو إرسال إشعار فوري للعميل في إنستجرام/واتساب/ماسنجر بأن البوت **"يكتب الآن... / Typing..."** بمجرد استقبال الرسالة، لكي لا يشعر العميل ببطء أثناء قيام الذكاء الاصطناعي بالبحث والمعالجة.
 
 ### 📍 أين تضع العقدة في الـ Canvas؟
 * ضع عقدة **`HTTP Request`** جديدة بعد استلام الـ Webhook مباشرة (مثلاً بعد `Supabase7` أو `Code in JavaScript6`) **وقبل** إرسال الرسالة إلى عقدة `AI Agent`.
@@ -44,15 +44,9 @@
   }
   ```
 
-> 📌 **مميزات Zernio Typing:**
-> * يظهر للعميل في Instagram و WhatsApp و Messenger فوراً.
-> * الـ Endpoint آمن (`best-effort`) ويعيد كود `200` مع `{ "success": true }` دون تعطيل الورك فلو في حال كان العميل غير متصل.
-
 ---
 
 ### 🌐 الخيار الثاني: عبر Meta / Instagram Graph API المباشر
-
-إذا كنت متصلاً بـ Meta Graph API مباشرة دون وسيط:
 
 * **Method:** `POST`
 * **URL:** `https://graph.facebook.com/v21.0/me/messages`
@@ -79,20 +73,21 @@
    📄 **[system_message.txt](file:///c:/Users/LOQ/Desktop/CLI/emirates%20mostafa/woocommerce/bot-dashboard/system_message.txt)**
 4. الصق المحتوى في حقل **`System Message`** واضغط **Save**.
 
-> 💡 **أبرز ما تم تضمينه في الـ Prompt:**
-> * شجرة التصنيفات الـ 11 الرسمية (`detected_category`).
-> * الحالات الـ 6 الإلزامية للتحويل لخدمة العملاء (`shipping_delay`، `return_request`، `unlisted_spec`، `order_cancellation`، `complaint`، `human_request`).
-> * صيغة JSON منيعة من 7 حقول تمنع أخطاء الـ Parsing وتضمن استقرار الردود.
+> 💡 **مزايا البرومبت المحدث (Prompt Engineering Optimization):**
+> * **توفير حتى 50% من الـ Tokens:** إيقاف توليد الحقول الفارغة (`null`) في الردود العادية (يتم إخراج `intent`, `reply`, `client_status` فقط في المحادثات العادية، وإضافة `category` أو `product_id` أو `complaint` أو `order` عند الحاجة إليها فقط).
+> * **شجرة التصنيفات الـ 11 الرسمية (`category`).**
+> * **الحالات الـ 6 الإلزامية للتحويل لخدمة العملاء.**
 
 ---
 
-## 3. الخطوة 3: كود عقدة المعالجة (Code in JavaScript2)
+## 3. الخطوة 3: كود عقدة المعالجة الذكية (Code in JavaScript2)
 
-افتح عقدة **`Code in JavaScript2`** (التي تقع بين `AI Agent` و `Switch1`) واستبدل الكود الموجود فيها بالكود التالي:
+افتح عقدة **`Code in JavaScript2`** (التي تقع بين `AI Agent` و `Switch1`) واستبدل الكود الموجود فيها بهذا الكود المرن والمحصّن:
 
 ```javascript
 // ============================================================================
-// Parse AI Agent Output — iConnect WhatsApp/Instagram Store Bot
+// Parse AI Agent Output — Optimized Compact Schema
+// Compatible with both Compact and Full Output Contracts
 // ============================================================================
 
 const VALID_INTENTS = [
@@ -137,6 +132,7 @@ function ok(intent, reply, extra = {}, parseNote = 'ok') {
       complaint: extra.complaint ?? null,
       order: extra.order ?? null,
       detected_category: extra.detected_category ?? null,
+      category: extra.detected_category ?? null,
       client_status: extra.client_status ?? (extra.detected_category ? 'interested' : 'new'),
       _parse: parseNote,
     },
@@ -216,10 +212,11 @@ const order =
     ? parsed.order
     : null;
 
-// مطابقة الكاتجوري مع الـ 11 كاتجوري المعتمدة
+// مطابقة الكاتجوري (يدعم category أو detected_category)
+const rawCategory = parsed.category ?? parsed.detected_category ?? null;
 let detectedCategory = null;
-if (typeof parsed.detected_category === 'string' && parsed.detected_category.trim()) {
-  const trimmed = parsed.detected_category.trim();
+if (typeof rawCategory === 'string' && rawCategory.trim()) {
+  const trimmed = rawCategory.trim();
   const matched = VALID_CATEGORIES.find(c => c.toLowerCase() === trimmed.toLowerCase());
   if (matched) detectedCategory = matched;
 }
@@ -276,41 +273,23 @@ return ok(intent, reply, {
 
 عند خروج الرسالة من مسار **`customer_service` / `complaint`** في `Switch1`:
 
-```mermaid
-flowchart LR
-    A["Switch1 (customer_service / complaint)"] --> B["Supabase: Disable AI (ai_enabled=false)"]
-    B --> C["Supabase: Update Status (client_type=support)"]
-    C --> D["Send Reply Message to Customer"]
-    C --> E["Send Notification to Team (Telegram / Dashboard)"]
-```
+1. **إيقاف الرد الآلي للعميل (`ai_enabled = false`):**
+   * **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `contacts`
+   * **Filter:** `id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+   * **Field:** `ai_enabled` = `false`
 
-### 1. إيقاف الرد الآلي للعميل (`ai_enabled = false`):
-* **Node Type:** `Supabase`
-* **Operation:** `Update`
-* **Table:** `contacts`
-* **Filter Conditions:**
-  * `id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Fields to Update:**
-  * `ai_enabled` = `false`
+2. **تحديث حالة العميل إلى `support`:**
+   * **Node Type:** `Supabase` $\rightarrow$ `Update` على جدول `crm_clients`
+   * **Filter:** `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
+   * **Field:** `client_type` = `support`
 
-### 2. تحديث حالة العميل إلى `support`:
-* **Node Type:** `Supabase`
-* **Operation:** `Update`
-* **Table:** `crm_clients`
-* **Filter Conditions:**
-  * `contact_id` **eq** `={{ $('Edit Fields4').item.json.contact_uuid }}`
-* **Fields to Update:**
-  * `client_type` = `support`
+3. **إرسال رد الاعتذار/التحويل للعميل** عبر واتساب أو إنستجرام.
 
-### 3. إرسال رد الاعتذار/التحويل للعميل:
-* إرسال `reply` الناتج من الـ AI agent إلى العميل عبر إنستجرام/واتساب.
-
-### 4. إرسال تنبيه للموظفين (Telegram / WhatsApp Alert):
-* محتوى التنبيه:
-  > 🚨 **تنبيه خدمة عملاء ومحادثة جديدة بحاجة لتدخل بشري**  
-  > 👤 **العميل:** `{{ $('Code in JavaScript6').item.json.SenderName }}`  
-  > 📱 **الرقم/المعرف:** `{{ $('Code in JavaScript6').item.json.SenderJid }}`  
-  > 📝 **السبب:** `{{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف / استفسار خاص' }}`
+4. **إرسال تنبيه للموظفين (Telegram / WhatsApp Alert):**
+   > 🚨 **تنبيه خدمة عملاء ومحادثة جديدة بحاجة لتدخل بشري**  
+   > 👤 **العميل:** `{{ $('Code in JavaScript6').item.json.SenderName }}`  
+   > 📱 **الرقم/المعرف:** `{{ $('Code in JavaScript6').item.json.SenderJid }}`  
+   > 📝 **السبب:** `{{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف / استفسار خاص' }}`
 
 ---
 
