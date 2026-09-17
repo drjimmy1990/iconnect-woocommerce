@@ -34,7 +34,7 @@ const RETRY_SLEEP_MS = 2000;
  * Only these (plus 429/5xx/network errors) are worth retrying — see shouldRetry().
  */
 const CHALLENGE_STATUSES = [403, 406, 409];
-const MAX_PAGE_CAP = 1000; // safety cap on total items fetched
+const MAX_PAGE_CAP = Number(process.env.MAX_PAGE_CAP) || 50000; // safety cap on total items fetched
 
 /**
  * Hard wall-clock ceiling for one request() call, retries included.

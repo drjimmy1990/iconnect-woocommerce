@@ -1,10 +1,8 @@
 # Security & Credentials
 api keys.txt
 *.env
-*.env.local
-*.env.production
-*.env.development
-*.env.test
+*.env.*
+.env*
 cookies.jar
 
 # Dependencies

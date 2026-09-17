@@ -160,6 +160,8 @@ Backends A/B get **no site** — they stay internal.
 | Next.js build killed (`signal 9`) | OOM — this host has **no swap** | Free RAM first, or add swap, or cap the heap |
 | Local (non-Docker) build misses TypeScript | npm skipped devDependencies | `npm install --include=dev` |
 | Windows→Linux CRLF warnings on commit | Repo stores LF; working copy is CRLF | Harmless — checkout on Linux is LF |
+| Supabase Studio shows `User authentication failed. Missing username and password` | Envoy sends `realm="http://..."` which modern browsers block over HTTPS | In aaPanel URL Proxy Config: `proxy_hide_header www-authenticate; add_header www-authenticate 'Basic realm="Supabase"' always;` |
+| `getaddrinfo ENOTFOUND <project>.supabase.co` | Supabase Cloud project paused due to inactivity | Unpause project in Supabase dashboard or deploy self-hosted Supabase |
 
 ### Useful commands
 ```bash
