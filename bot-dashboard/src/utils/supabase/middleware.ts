@@ -31,10 +31,28 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // This will refresh the user's session if it's expired.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data?.user) {
+      user = data.user;
+    }
+  } catch {
+    // In Docker containers, public domain DNS / hairpin NAT may fail for internal container fetch
+  }
+
+  // Fallback: If remote network check failed, inspect the local session cookie
+  if (!user) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user && session.expires_at && session.expires_at * 1000 > Date.now()) {
+        user = session.user;
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const { pathname } = request.nextUrl;
 

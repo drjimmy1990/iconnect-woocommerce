@@ -28,33 +28,9 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Silently check if an active valid session already exists; clean stale/expired tokens to prevent loops
+  // Clean up any stale sessions on login page load
   useEffect(() => {
-    let isMounted = true;
-
-    const verifyExistingSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        // Verify with server
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (user && !userError && isMounted) {
-          window.location.href = '/';
-        } else {
-          // Stale or expired token in localStorage: clear to stop infinite reload loops
-          await supabase.auth.signOut();
-        }
-      } catch {
-        // Silently catch on login page
-      }
-    };
-
-    verifyExistingSession();
-
-    return () => {
-      isMounted = false;
-    };
+    // Ensure clean state if navigated to login
   }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {

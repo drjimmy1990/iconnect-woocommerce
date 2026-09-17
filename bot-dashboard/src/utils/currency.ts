@@ -1,6 +1,6 @@
 // src/utils/currency.ts
 
-export const DEFAULT_CURRENCY = process.env.NEXT_PUBLIC_CURRENCY || 'SAR';
+export const DEFAULT_CURRENCY = 'SAR';
 
 /**
  * Format a number as currency using Intl.NumberFormat
@@ -18,10 +18,10 @@ export function formatCurrency(
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: targetCurrency,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
       ...options,
     }).format(numericAmount);
   } catch {
-    return `${numericAmount.toFixed(2)} ${targetCurrency}`;
+    return `${targetCurrency} ${numericAmount.toLocaleString('en-US')}`;
   }
 }
