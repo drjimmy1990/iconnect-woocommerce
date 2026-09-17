@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Divider, Chip, Stack, LinearProgress } from '@mui/material';
+import { Box, Typography, Divider, Chip, Stack, LinearProgress, Tooltip } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -8,17 +8,17 @@ import PersonIcon from '@mui/icons-material/Person';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { CrmClient, Contact } from '@/lib/api';
 
-// step 0 = off-funnel (not part of the ordered funnel progression)
-const STAGE_CONFIG: Record<string, { label: string; color: string; step: number }> = {
-    first_contact: { label: 'First Contact', color: '#94a3b8', step: 1 },
-    browsing: { label: 'Browsing', color: '#667eea', step: 2 },
-    product_viewed: { label: 'Product Viewed', color: '#4facfe', step: 3 },
-    order_placed: { label: 'Order Placed', color: '#f59e0b', step: 4 },
-    purchased: { label: 'Purchased', color: '#38ef7d', step: 5 },
-    support: { label: 'Support', color: '#ef4444', step: 0 },
+// Client Lifecycle Funnel Stages based on client_type
+const CLIENT_STAGE_CONFIG: Record<string, { label: string; color: string; step: number; emoji: string }> = {
+    new: { label: 'New Lead', color: '#3b82f6', step: 1, emoji: '🆕' },
+    interested: { label: 'Interested', color: '#f59e0b', step: 2, emoji: '👀' },
+    customer: { label: 'Customer', color: '#10b981', step: 3, emoji: '🛍️' },
+    repeat_customer: { label: 'Repeat Customer', color: '#8b5cf6', step: 4, emoji: '⭐' },
+    inactive: { label: 'Inactive', color: '#6b7280', step: 0, emoji: '💤' },
+    support: { label: 'Support', color: '#ef4444', step: 0, emoji: '🛠️' },
 };
 
-const FUNNEL_STAGES = Object.values(STAGE_CONFIG).filter((s) => s.step > 0);
+const FUNNEL_STAGES = Object.values(CLIENT_STAGE_CONFIG).filter((s) => s.step > 0);
 
 interface ClientSidebarProps {
     client: CrmClient;
@@ -34,8 +34,14 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
 
     const platformName = contact?.platform || 'Unknown Platform';
 
-    const currentStage = client?.conversation_stage || 'first_contact';
-    const stageInfo = STAGE_CONFIG[currentStage] || STAGE_CONFIG.first_contact;
+    // Primary stage is client_type (new -> interested -> customer -> repeat_customer)
+    const currentStageKey = client?.client_type || 'new';
+    const stageInfo = CLIENT_STAGE_CONFIG[currentStageKey] || {
+        label: currentStageKey.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        color: '#667eea',
+        step: 1,
+        emoji: '📌',
+    };
     const isOffFunnel = stageInfo.step === 0;
     const stageProgress = isOffFunnel ? 0 : (stageInfo.step / FUNNEL_STAGES.length) * 100;
 
@@ -79,14 +85,14 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
 
             <Divider sx={{ my: 3 }} />
 
-            {/* Conversation Stage */}
+            {/* Client Stage */}
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                CONVERSATION STAGE
+                CLIENT STAGE
             </Typography>
             <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Chip
-                        label={stageInfo.label}
+                        label={`${stageInfo.emoji} ${stageInfo.label}`}
                         size="small"
                         sx={{
                             bgcolor: `${stageInfo.color}20`,
@@ -114,18 +120,24 @@ export default function ClientSidebar({ client, contact }: ClientSidebarProps) {
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     {FUNNEL_STAGES.map((s) => (
-                        <Box
-                            key={s.label}
-                            sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                bgcolor: !isOffFunnel && s.step <= stageInfo.step ? stageInfo.color : 'grey.300',
-                                transition: 'background-color 0.3s',
-                            }}
-                        />
+                        <Tooltip key={s.label} title={s.label} arrow>
+                            <Box
+                                sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    bgcolor: !isOffFunnel && s.step <= stageInfo.step ? stageInfo.color : 'grey.300',
+                                    transition: 'background-color 0.3s',
+                                }}
+                            />
+                        </Tooltip>
                     ))}
                 </Box>
+                {client?.conversation_stage && client.conversation_stage !== 'first_contact' && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                        Bot: {client.conversation_stage.replace(/_/g, ' ')}
+                    </Typography>
+                )}
             </Box>
 
             <Divider sx={{ my: 3 }} />

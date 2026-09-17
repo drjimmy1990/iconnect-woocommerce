@@ -14,21 +14,41 @@ export const useChatMessages = (contactId: string | null, channelId: string | nu
 
   // REMOVED: Validation for old hardcoded IDs
 
+  // --- EFFECT: Instantly clear unread count in local cache & mark as read in DB ---
+  useEffect(() => {
+    if (!contactId || !channelId) return;
+
+    // 1. Optimistically clear unread badge in cache immediately (0ms UI latency)
+    queryClient.setQueriesData(
+      { queryKey: ['contacts', channelId] },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          pages: oldData.pages.map((page: any[]) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            page.map((c: any) => (c.id === contactId ? { ...c, unread_count: 0 } : c))
+          ),
+        };
+      }
+    );
+
+    // 2. Mark chat as read in the database asynchronously
+    api.markChatAsRead(contactId).catch((err) => {
+      console.error('Failed to mark chat as read:', err);
+    });
+  }, [contactId, channelId, queryClient]);
+
   // --- QUERY ---
   const { data: messages = [], isLoading: isLoadingMessages } = useQuery<api.Message[]>({
     queryKey: ['messages', contactId],
     queryFn: async () => {
       if (!contactId) return [];
-
-      await Promise.all([
-        api.markChatAsRead(contactId),
-        // 2. Invalidate the dynamic contacts query key
-        queryClient.invalidateQueries({ queryKey: ['contacts', channelId] })
-      ]);
-
       return api.getMessagesForContact(contactId);
     },
-    // 3. Query is enabled only when we have all necessary IDs
+    // Query is enabled only when we have all necessary IDs
     enabled: !!contactId && !!channelId,
   });
 
@@ -128,9 +148,26 @@ export const useChatMessages = (contactId: string | null, channelId: string | nu
           });
 
           if (document.hasFocus()) {
-            api.markChatAsRead(contactId)
-              // 7. Invalidate the dynamic contacts query key
-              .then(() => queryClient.invalidateQueries({ queryKey: ['contacts', channelId] }));
+            api.markChatAsRead(contactId).catch(console.error);
+            queryClient.setQueriesData(
+              { queryKey: ['contacts', channelId] },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (oldData: any) => {
+                if (!oldData?.pages) return oldData;
+                return {
+                  ...oldData,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  pages: oldData.pages.map((page: any[]) =>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    page.map((c: any) =>
+                      c.id === contactId
+                        ? { ...c, unread_count: 0, last_message_preview: newMessage.text_content || 'Media message' }
+                        : c
+                    )
+                  ),
+                };
+              }
+            );
           } else {
             queryClient.invalidateQueries({ queryKey: ['contacts', channelId] });
           }
