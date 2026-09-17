@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { RevenueMetric } from '@/hooks/useAnalytics';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import { formatCurrency, DEFAULT_CURRENCY } from '@/utils/currency';
 
 interface RevenueAnalyticsProps {
     data?: RevenueMetric[];
@@ -65,7 +66,7 @@ export default function RevenueAnalytics({ data, isLoading, height = 350 }: Reve
                     No Revenue Data Yet
                 </Typography>
                 <Typography variant="body2" color="text.disabled" textAlign="center">
-                    Revenue trends will appear here once deals are closed.
+                    Revenue trends will appear here once orders are placed.
                 </Typography>
             </Paper>
         );
@@ -110,7 +111,7 @@ export default function RevenueAnalytics({ data, isLoading, height = 350 }: Reve
                         <YAxis
                             stroke={theme.palette.text.secondary}
                             tick={{ fontSize: 12 }}
-                            tickFormatter={(value) => `$${value}`}
+                            tickFormatter={(value) => formatCurrency(Number(value), DEFAULT_CURRENCY, { maximumFractionDigits: 0 })}
                         />
                         <Tooltip
                             contentStyle={{
@@ -118,7 +119,7 @@ export default function RevenueAnalytics({ data, isLoading, height = 350 }: Reve
                                 border: `1px solid ${theme.palette.divider}`,
                                 borderRadius: 8
                             }}
-                            formatter={(value) => value !== undefined ? [`$${value}`, 'Revenue'] : ['N/A', 'Revenue']}
+                            formatter={(value) => value !== undefined ? [formatCurrency(Number(value)), 'Revenue'] : ['N/A', 'Revenue']}
                             labelFormatter={(label) => new Date(label).toLocaleDateString()}
                         />
                         <Legend />

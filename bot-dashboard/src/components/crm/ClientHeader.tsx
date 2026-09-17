@@ -6,7 +6,6 @@ import { Box, Typography, Paper, Chip, Grid } from '@mui/material';
 import { CrmClient } from '@/lib/api';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonIcon from '@mui/icons-material/Person';
-import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 
 interface ClientHeaderProps {
@@ -31,15 +30,7 @@ const StatItem = ({ icon, label, value }: { icon: React.ReactNode, label: string
 
 export default function ClientHeader({ client }: ClientHeaderProps) {
 
-  // Helper function to format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-EG', {
-      style: 'currency',
-      currency: 'EGP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+
 
   // Helper function to format dates
   const formatDate = (dateString: string | null) => {

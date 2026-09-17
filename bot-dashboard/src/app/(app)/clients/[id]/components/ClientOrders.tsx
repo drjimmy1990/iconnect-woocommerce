@@ -14,6 +14,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import { CrmOrder, CrmOrderItem } from '@/lib/api';
 import { useClient, AddOrderPayload } from '@/hooks/useClient';
 import OrderDialog from '@/components/crm/OrderDialog';
+import { formatCurrency } from '@/utils/currency';
 
 // Status color mapping
 const getStatusColor = (status: string): 'success' | 'info' | 'warning' | 'error' | 'default' | 'primary' => {
@@ -48,9 +49,7 @@ function OrderRow({ order }: { order: CrmOrder }) {
         });
     };
 
-    const formatCurrency = (amount: number, currency = 'USD') => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-    };
+
 
     return (
         <>
@@ -248,7 +247,7 @@ export default function ClientOrders({ clientId, orders }: ClientOrdersProps) {
                 <Box>
                     <Typography variant="h6" fontWeight={600}>Order History</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        {orders.length} order{orders.length !== 1 ? 's' : ''} • Total Revenue: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalRevenue)}
+                        {orders.length} order{orders.length !== 1 ? 's' : ''} • Total Revenue: {formatCurrency(totalRevenue)}
                     </Typography>
                 </Box>
                 <Button

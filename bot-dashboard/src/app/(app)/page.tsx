@@ -6,6 +6,8 @@ import { Box, Typography, Grid, Card, CardActionArea, Divider } from '@mui/mater
 import { useRouter } from 'next/navigation';
 import ChatIcon from '@mui/icons-material/Chat';
 import DnsIcon from '@mui/icons-material/Dns';
+import PeopleIcon from '@mui/icons-material/People';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDashboardSummary, useChannelPerformance } from '@/hooks/useAnalytics';
 import DashboardMetricsGrid from './analytics/components/DashboardMetricsGrid';
@@ -20,17 +22,29 @@ export default function HomePage() {
 
   const sections = [
     {
-      title: 'Chat Interface',
-      description: 'View and manage live conversations with your contacts.',
+      title: 'Live Chat',
+      description: 'View and manage real-time conversations across WhatsApp, Instagram, and Facebook.',
       icon: <ChatIcon fontSize="large" color="primary" />,
       path: '/chat'
     },
     {
-      title: 'Channel Management',
-      description: 'Add, configure, and manage your communication channels.',
-      icon: <DnsIcon fontSize="large" color="primary" />,
+      title: 'Clients & CRM',
+      description: 'Manage customer profiles, order history, tags, and lifecycle stages.',
+      icon: <PeopleIcon fontSize="large" color="success" />,
+      path: '/clients'
+    },
+    {
+      title: 'Channels & Bots',
+      description: 'Configure and monitor connected communication channels and AI agents.',
+      icon: <DnsIcon fontSize="large" color="warning" />,
       path: '/channels'
-    }
+    },
+    {
+      title: 'Analytics & Revenue',
+      description: 'Track store sales, conversation funnels, and bot response metrics.',
+      icon: <AnalyticsIcon fontSize="large" color="info" />,
+      path: '/analytics'
+    },
   ];
 
   return (

@@ -45,7 +45,7 @@ export default function OrderDialog({ open, onClose, onSubmit, isSubmitting }: O
     const [orderNumber, setOrderNumber] = useState(generateOrderId());
     const [status, setStatus] = useState('pending');
     const [fulfillment, setFulfillment] = useState('unfulfilled');
-    const [currency, setCurrency] = useState('USD');
+    const [currency, setCurrency] = useState('SAR');
 
     // Line items
     const [items, setItems] = useState<CrmOrderItem[]>([{ name: '', quantity: 1, price: 0 }]);
@@ -71,7 +71,7 @@ export default function OrderDialog({ open, onClose, onSubmit, isSubmitting }: O
             setOrderNumber(generateOrderId());
             setStatus('pending');
             setFulfillment('unfulfilled');
-            setCurrency('USD');
+            setCurrency('SAR');
             setItems([{ name: '', quantity: 1, price: 0 }]);
             setTax(0);
             setShipping(0);
@@ -192,10 +192,11 @@ export default function OrderDialog({ open, onClose, onSubmit, isSubmitting }: O
                             fullWidth
                             size="small"
                         >
+                            <MenuItem value="SAR">SAR (ر.س)</MenuItem>
+                            <MenuItem value="AED">AED (د.إ)</MenuItem>
                             <MenuItem value="USD">USD ($)</MenuItem>
-                            <MenuItem value="EUR">EUR (€)</MenuItem>
-                            <MenuItem value="ILS">ILS (₪)</MenuItem>
                             <MenuItem value="EGP">EGP (ج.م)</MenuItem>
+                            <MenuItem value="EUR">EUR (€)</MenuItem>
                         </TextField>
                     </Grid>
                 </Grid>

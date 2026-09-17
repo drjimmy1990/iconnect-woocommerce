@@ -9,6 +9,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { DashboardSummary, ChannelPerformance } from '@/hooks/useAnalytics';
 import ChatIcon from '@mui/icons-material/Chat';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import { formatCurrency } from '@/utils/currency';
 
 interface DashboardMetricsGridProps {
     data?: DashboardSummary;
@@ -134,12 +135,6 @@ export default function DashboardMetricsGrid({ data, channelPerformance, selecte
             </Grid>
         );
     }
-
-    const formatCurrency = (v: number) => new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'EGP',
-        maximumFractionDigits: 0
-    }).format(v);
 
     const formatNumber = (v: number) => new Intl.NumberFormat('en-US').format(v);
 

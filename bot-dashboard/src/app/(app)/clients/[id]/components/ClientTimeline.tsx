@@ -65,7 +65,6 @@ export default function ClientTimeline() {
                 <Chip label="All" onClick={() => setFilter('all')} color={filter === 'all' ? 'primary' : 'default'} />
                 <Chip label="Notes" onClick={() => setFilter('note')} color={filter === 'note' ? 'primary' : 'default'} />
                 <Chip label="Calls" onClick={() => setFilter('call')} color={filter === 'call' ? 'primary' : 'default'} />
-                <Chip label="Deals" onClick={() => setFilter('deal')} color={filter === 'deal' ? 'primary' : 'default'} />
             </Box>
 
             <Paper variant="outlined">
