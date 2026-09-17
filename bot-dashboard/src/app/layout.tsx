@@ -9,8 +9,6 @@ import QueryProvider from '@/providers/QueryProvider';
 import AuthProvider from '@/providers/AuthProvider';
 import './globals.css';
 import { UIProvider } from '@/providers/UIProvider';
-import { ChannelProvider } from '@/providers/ChannelProvider';
-import { NotificationProvider } from '@/providers/NotificationProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -34,14 +32,9 @@ export default function RootLayout({
             <CssBaseline />
             <QueryProvider>
               <AuthProvider>
-                {/* UIProvider must be here, wrapping the children */}
+                {/* UIProvider wraps children; authenticated providers live in (app)/layout.tsx */}
                 <UIProvider>
-                  <ChannelProvider>
-                    <NotificationProvider>
-                      {/* All other layouts, like (app)/layout.tsx, will be rendered here as 'children' */}
-                      {children}
-                    </NotificationProvider>
-                  </ChannelProvider>
+                  {children}
                 </UIProvider>
               </AuthProvider>
             </QueryProvider>

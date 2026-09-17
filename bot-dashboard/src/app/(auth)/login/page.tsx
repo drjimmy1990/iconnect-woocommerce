@@ -14,7 +14,6 @@ import {
   Avatar,
   Fade,
 } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -28,26 +27,35 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const router = useRouter();
 
-  // Check if session already exists on load
+  // Silently check if an active valid session already exists; clean stale/expired tokens to prevent loops
   useEffect(() => {
-    const checkSession = async () => {
+    let isMounted = true;
+
+    const verifyExistingSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          router.replace('/');
+        if (!session) return;
+
+        // Verify with server
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (user && !userError && isMounted) {
+          window.location.href = '/';
         } else {
-          setIsCheckingAuth(false);
+          // Stale or expired token in localStorage: clear to stop infinite reload loops
+          await supabase.auth.signOut();
         }
       } catch {
-        setIsCheckingAuth(false);
+        // Silently catch on login page
       }
     };
 
-    checkSession();
-  }, [router]);
+    verifyExistingSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -55,7 +63,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -63,36 +71,20 @@ export default function LoginPage() {
       if (signInError) {
         setError(signInError.message);
         setIsLoading(false);
+        return;
+      }
+
+      if (data?.session) {
+        // Full page navigation guarantees fresh session cookies are sent with HTTP headers to Next.js middleware
+        window.location.href = '/';
       } else {
-        router.push('/');
-        router.refresh();
+        setIsLoading(false);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setIsLoading(false);
     }
   };
-
-  if (isCheckingAuth) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          bgcolor: '#0f172a',
-          gap: 2,
-        }}
-      >
-        <CircularProgress sx={{ color: '#38bdf8' }} />
-        <Typography variant="body2" sx={{ color: '#94a3b8' }}>
-          Checking authorization...
-        </Typography>
-      </Box>
-    );
-  }
 
   return (
     <Box

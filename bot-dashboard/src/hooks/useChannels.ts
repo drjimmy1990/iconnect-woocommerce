@@ -3,21 +3,7 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
-import { useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-
-// Helper hook to reliably get the current user session.
-function useAuth() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => { setUser(session?.user ?? null); setLoading(false); });
-        supabase.auth.getSession().then(({ data: { session } }) => { if (!user) setUser(session?.user ?? null); setLoading(false); });
-        return () => subscription.unsubscribe();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-    return { user, loading };
-}
+import { useAuth } from '@/providers/AuthProvider';
 
 // Type definitions for the channel and its creation payload.
 export interface Channel { id: string; organization_id: string; name: string; platform: 'whatsapp' | 'facebook' | 'instagram' | 'telegram' | 'web'; platform_channel_id: string; is_active: boolean; }
