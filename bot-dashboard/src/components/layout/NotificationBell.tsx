@@ -17,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 function getNotificationIcon(type: string) {
     switch (type) {
         case 'handoff':
+        case 'customer_service':
             return <PriorityHighIcon color="error" sx={{ fontSize: 20 }} />;
         case 'alert':
             return <WarningIcon color="warning" sx={{ fontSize: 20 }} />;

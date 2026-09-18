@@ -302,7 +302,7 @@ flowchart LR
 
 ### 3. إرسال التنبيه اللحظي للداشبورد (`Create a row4`):
 * **Node Type:** `Supabase` $\rightarrow$ `Create a row` على جدول `system_notifications`
-* **Type:** `customer_service`
+* **Type:** `handoff`
 * **Title:** `=🚨 طلب خدمة عملاء: {{ $('Code in JavaScript6').item.json.SenderName || 'عميل' }}`
 * **Message:** `={{ $('Code in JavaScript2').item.json.complaint || 'طلب تحويل لموظف بشري / استفسار خاص' }}`
 * **Client ID:** `={{ $('Edit Fields4').item.json.contact_uuid }}`
