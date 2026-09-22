@@ -58,6 +58,9 @@ const ATTEMPT_TIMEOUT_MS = Number(process.env.WC_ATTEMPT_TIMEOUT_MS) || 10000;
 const client: AxiosInstance = axios.create({
   baseURL: WC_URL,
   timeout: 30000,
+  params: {
+    lang: "en", // WPML fix: prevents 500 fatal crash on Arabic REST requests
+  },
   headers: {
     "User-Agent": USER_AGENT,
     Cookie: WC_COOKIE,
@@ -193,7 +196,7 @@ export async function request<T = any>(
       const config: AxiosRequestConfig = {
         method,
         url: path,
-        params,
+        params: { lang: "en", ...params },
         data,
         // Never let a single attempt run past the overall deadline.
         timeout: Math.min(ATTEMPT_TIMEOUT_MS, remaining),
@@ -294,7 +297,9 @@ export async function getProducts(
     const storeParams: Record<string, any> = {};
     if (params.search) storeParams.search = params.search;
     if (params.category) storeParams.category = params.category;
-    if (params.per_page) storeParams.per_page = params.per_page;
+    // Cap per_page to 12 max to prevent WordPress memory exhaustion / 500 fatal errors
+    const requestedPerPage = Number(params.per_page) || 10;
+    storeParams.per_page = Math.min(requestedPerPage, 12);
     if (params.page) storeParams.page = params.page;
     if (params.orderby) storeParams.orderby = params.orderby;
     if (params.order) storeParams.order = params.order;
@@ -304,7 +309,7 @@ export async function getProducts(
     return { data: normalized, headers: storeRes.headers || {} };
   } catch (storeErr: any) {
     console.warn(`[wc] Store API getProducts failed (${storeErr?.message || storeErr}). Trying Classic API v3 fallback...`);
-    const res = await request<any[]>("get", "products", params, undefined, { retry: 1 });
+    const res = await request<any[]>("get", "products", { ...params, per_page: Math.min(Number(params.per_page) || 10, 12) }, undefined, { retry: 1 });
     return { data: res.data, headers: res.headers };
   }
 }
@@ -398,20 +403,38 @@ export async function trackOrder(query: {
   if (query.order_id && query.order_key) {
     try {
       const order = await getOrder(query.order_id);
-      if (order.order_key === query.order_key) return order;
+      if (order && (!query.order_key || order.order_key === query.order_key)) return order;
     } catch {
       // fall through
     }
   }
   // Search by email or phone
-  const search: Record<string, any> = { per_page: 10 };
+  const search: Record<string, any> = { per_page: 10, lang: "en" };
   if (query.email) search.search = query.email;
   else if (query.phone) search.search = query.phone;
-  const res = await request<any[]>("get", "orders", search);
-  // If order_id was provided, filter matches
-  if (query.order_id) {
-    const match = res.data.find((o) => o.id === query.order_id);
-    if (match) return match;
+
+  try {
+    const res = await request<any[]>("get", "orders", search);
+    const list = Array.isArray(res.data) ? res.data : [];
+    // If order_id was provided, filter matches
+    if (query.order_id) {
+      const match = list.find((o) => o.id === query.order_id);
+      if (match) return match;
+    }
+    // If phone was provided, try fuzzy match on billing phone digits
+    if (query.phone && list.length > 0) {
+      const cleanPhone = query.phone.replace(/\D/g, "");
+      if (cleanPhone.length >= 6) {
+        const match = list.find((o) => {
+          const orderPhone = (o.billing?.phone || "").replace(/\D/g, "");
+          return orderPhone && (orderPhone.includes(cleanPhone) || cleanPhone.includes(orderPhone));
+        });
+        if (match) return match;
+      }
+    }
+    return list[0] || null;
+  } catch (err: any) {
+    console.warn(`[wc] trackOrder search failed:`, err?.message || err);
+    return null;
   }
-  return res.data[0] || null;
 }

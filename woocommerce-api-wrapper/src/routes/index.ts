@@ -69,8 +69,8 @@ const productsQuerySchema = z.object({
 router.get("/products", async (req: Request, res: Response) => {
   try {
     const q = productsQuerySchema.parse(req.query);
-    // The full shape is heavy; don't let a caller ask for 100 of them at once.
-    const perPage = q.view === "full" ? Math.min(q.per_page, 50) : q.per_page;
+    // Cap perPage to 12 max to protect WordPress from 500 memory exhaustion
+    const perPage = Math.min(q.per_page, 12);
     const { data, headers } = await getProducts({
       search: q.search,
       category: q.category,
@@ -241,8 +241,13 @@ router.get("/orders/track", async (req: Request, res: Response) => {
   try {
     const q = trackQuerySchema.parse(req.query);
     const order = await trackOrder(q);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json(trimOrder(order));
+    if (!order) {
+      return res.status(200).json({
+        found: false,
+        message: "لم يتم العثور على أي طلب مسجل بهذا الرقم أو البيانات المدخلة",
+      });
+    }
+    res.json({ found: true, ...trimOrder(order) });
   } catch (err: any) {
     res.status(err.status || 400).json({ error: err.message });
   }
