@@ -68,6 +68,55 @@ const client: AxiosInstance = axios.create({
   },
 });
 
+const WC_STORE_API_URL =
+  process.env.WC_STORE_API_URL ||
+  WC_URL.replace(/\/wc\/v[123]\/?$/, "/wc/store/v1");
+
+const storeClient: AxiosInstance = axios.create({
+  baseURL: WC_STORE_API_URL,
+  timeout: 15000,
+  headers: {
+    "User-Agent": USER_AGENT,
+    Cookie: WC_COOKIE,
+    Accept: "application/json",
+  },
+});
+
+export function normalizeStoreApiProduct(p: any) {
+  const minorUnit = p.prices?.currency_minor_unit ?? 2;
+  const divisor = Math.pow(10, minorUnit);
+  const price = p.prices?.price ? (Number(p.prices.price) / divisor).toFixed(2) : "0";
+  const regularPrice = p.prices?.regular_price ? (Number(p.prices.regular_price) / divisor).toFixed(2) : price;
+  const salePrice =
+    p.prices?.sale_price && p.prices.sale_price !== p.prices.regular_price
+      ? (Number(p.prices.sale_price) / divisor).toFixed(2)
+      : "";
+
+  const attributes = (p.attributes || []).map((attr: any) => ({
+    name: attr.name || "",
+    options: (attr.terms || []).map((t: any) => t.name || ""),
+  }));
+
+  return {
+    id: p.id,
+    name: p.name || "",
+    price,
+    regular_price: regularPrice,
+    sale_price: salePrice,
+    currency: p.prices?.currency_code || "SAR",
+    sku: p.sku || "",
+    stock_status: p.is_in_stock ? "instock" : "outofstock",
+    type: p.type || "simple",
+    status: "publish",
+    permalink: p.permalink || "",
+    images: (p.images || []).map((img: any) => ({ src: img.src || img.thumbnail })),
+    categories: (p.categories || []).map((c: any) => ({ id: c.id, name: c.name })),
+    attributes,
+    short_description: p.short_description || "",
+    description: p.description || "",
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -98,7 +147,25 @@ function shouldRetry(err: any): boolean {
   if (status === undefined) return true; // network error / timeout — no response at all
   if (CHALLENGE_STATUSES.includes(status)) return true;
   if (status === 429) return true;
-  return status >= 500;
+
+  // Check if WordPress threw a PHP fatal error (JSON { code: "internal_server_error" } or HTML)
+  const dataStr =
+    typeof err?.response?.data === "object"
+      ? JSON.stringify(err.response.data)
+      : String(err?.response?.data || "");
+  if (
+    dataStr.includes("wp-die-message") ||
+    dataStr.includes("خطأ فادح") ||
+    dataStr.includes("internal_server_error")
+  ) {
+    return false; // Do not retry fatal PHP crashes!
+  }
+
+  // Do NOT retry 500 Internal Server Error (PHP fatal crashes on origin).
+  // Only retry transient 502/503/504 gateway issues.
+  if (status === 500) return false;
+
+  return status > 500;
 }
 
 /**
@@ -211,30 +278,71 @@ export async function getProducts(
   params: Record<string, any> = {},
   doPaginate = false,
 ): Promise<{ data: any[]; headers: any }> {
+  // If paginating (e.g. delta-sync or bulk crawl), we try Classic API v3 because Store API doesn't support modified_after
   if (doPaginate) {
-    const result = await paginate<any>("products", params);
-    return { data: result.items, headers: { "x-wp-total": String(result.total), "x-wp-totalpages": String(result.totalPages) } };
+    try {
+      const result = await paginate<any>("products", params);
+      return { data: result.items, headers: { "x-wp-total": String(result.total), "x-wp-totalpages": String(result.totalPages) } };
+    } catch (err: any) {
+      console.warn(`[wc] Classic API getProducts(doPaginate) failed:`, err?.message || err);
+      throw err;
+    }
   }
-  const res = await request<any[]>("get", "products", params);
-  return { data: res.data, headers: res.headers };
+
+  // For regular queries (search, category, list), try Store API first (fast & reliable, avoids WP 500 fatal errors)
+  try {
+    const storeParams: Record<string, any> = {};
+    if (params.search) storeParams.search = params.search;
+    if (params.category) storeParams.category = params.category;
+    if (params.per_page) storeParams.per_page = params.per_page;
+    if (params.page) storeParams.page = params.page;
+    if (params.orderby) storeParams.orderby = params.orderby;
+    if (params.order) storeParams.order = params.order;
+
+    const storeRes = await storeClient.get<any[]>("products", { params: storeParams });
+    const normalized = (storeRes.data || []).map(normalizeStoreApiProduct);
+    return { data: normalized, headers: storeRes.headers || {} };
+  } catch (storeErr: any) {
+    console.warn(`[wc] Store API getProducts failed (${storeErr?.message || storeErr}). Trying Classic API v3 fallback...`);
+    const res = await request<any[]>("get", "products", params, undefined, { retry: 1 });
+    return { data: res.data, headers: res.headers };
+  }
 }
 
 /** Fetch a single product by ID. */
 export async function getProduct(id: number) {
-  const res = await request<any>("get", `products/${id}`);
-  return res.data;
+  try {
+    const storeRes = await storeClient.get<any>(`products/${id}`);
+    return normalizeStoreApiProduct(storeRes.data);
+  } catch (storeErr: any) {
+    console.warn(`[wc] Store API getProduct(${id}) failed (${storeErr?.message || storeErr}). Trying Classic API v3 fallback...`);
+    const res = await request<any>("get", `products/${id}`, undefined, undefined, { retry: 1 });
+    return res.data;
+  }
 }
 
 /** Fetch product categories. */
 export async function getCategories(params: Record<string, any> = {}) {
-  const res = await request<any[]>("get", "products/categories", params);
-  return { data: res.data, headers: res.headers };
+  try {
+    const storeRes = await storeClient.get<any[]>("products/categories", { params });
+    return { data: storeRes.data, headers: storeRes.headers || {} };
+  } catch (storeErr: any) {
+    console.warn(`[wc] Store API getCategories failed (${storeErr?.message || storeErr}). Trying Classic API v3 fallback...`);
+    const res = await request<any[]>("get", "products/categories", params, undefined, { retry: 1 });
+    return { data: res.data, headers: res.headers };
+  }
 }
 
 /** Fetch a single category by ID. */
 export async function getCategory(id: number) {
-  const res = await request<any>("get", `products/categories/${id}`);
-  return res.data;
+  try {
+    const storeRes = await storeClient.get<any>(`products/categories/${id}`);
+    return storeRes.data;
+  } catch (storeErr: any) {
+    console.warn(`[wc] Store API getCategory(${id}) failed (${storeErr?.message || storeErr}). Trying Classic API v3 fallback...`);
+    const res = await request<any>("get", `products/categories/${id}`, undefined, undefined, { retry: 1 });
+    return res.data;
+  }
 }
 
 /** Fetch product attributes. */
