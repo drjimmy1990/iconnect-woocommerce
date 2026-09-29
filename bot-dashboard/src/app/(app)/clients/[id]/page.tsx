@@ -44,7 +44,7 @@ export default function ClientProfilePage() {
     const clientId = params.id as string;
     const [tabValue, setTabValue] = useState(0);
 
-    const { clientData, isLoading, error } = useClient(clientId);
+    const { clientData, isLoading, error, updateClient } = useClient(clientId);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -76,7 +76,7 @@ export default function ClientProfilePage() {
             <Grid container sx={{ flexGrow: 1, overflow: 'hidden' }}>
                 {/* Left Sidebar */}
                 <Grid size={{ xs: 12, md: 3, lg: 2.5 }} sx={{ height: '100%', overflowY: 'auto', borderRight: '1px solid', borderColor: 'divider' }}>
-                    <ClientSidebar client={client} contact={contact} />
+                    <ClientSidebar client={client} contact={contact} onUpdateClient={updateClient} />
                 </Grid>
 
                 {/* Main Content Area */}

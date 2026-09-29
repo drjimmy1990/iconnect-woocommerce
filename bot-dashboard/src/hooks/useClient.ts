@@ -83,8 +83,6 @@ async function fetchClient360Data(clientId: string): Promise<Client360Data> {
     if (contactError) {
       console.warn(`Could not fetch associated contact: ${contactError.message}`);
     } else {
-      // Flatten channel info into contact object for easier access if needed, 
-      // or just keep it nested. For now, we'll keep it as is but ensure types match.
       contact = contactData as unknown as Contact;
 
       // Fetch message count
@@ -92,6 +90,33 @@ async function fetchClient360Data(clientId: string): Promise<Client360Data> {
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('contact_id', clientRes.data.contact_id);
+
+      if (!countError) {
+        messageCount = count || 0;
+      }
+    }
+  } else if (clientRes.data.platform_user_id) {
+    // Fallback: Find associated contact by platform_user_id
+    const { data: contactData } = await supabase
+      .from('contacts')
+      .select(`
+        *,
+        channels (
+          name,
+          platform
+        )
+      `)
+      .eq('platform_user_id', clientRes.data.platform_user_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (contactData) {
+      contact = contactData as unknown as Contact;
+
+      const { count, error: countError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('contact_id', contactData.id);
 
       if (!countError) {
         messageCount = count || 0;

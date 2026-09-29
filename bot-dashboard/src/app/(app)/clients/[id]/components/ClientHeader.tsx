@@ -8,6 +8,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import { useRouter } from 'next/navigation';
 import { CrmClient, Contact } from '@/lib/api';
+import { resolveClientPhone, getWhatsAppNumber } from '@/utils/phone';
 import ClientEditModal from './ClientEditModal';
 
 interface ClientHeaderProps {
@@ -18,6 +19,8 @@ interface ClientHeaderProps {
 export default function ClientHeader({ client, contact }: ClientHeaderProps) {
     const router = useRouter();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const phone = resolveClientPhone(client, contact);
+    const whatsappNumber = phone ? getWhatsAppNumber(phone) : null;
 
     return (
         <Box sx={{
@@ -99,11 +102,11 @@ export default function ClientHeader({ client, contact }: ClientHeaderProps) {
                 >
                     Edit Profile
                 </Button>
-                {client?.phone && (
+                {whatsappNumber && (
                     <Button
                         variant="contained"
                         startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
-                        onClick={() => window.open(`https://wa.me/${client.phone!.replace(/\D/g, '')}`, '_blank')}
+                        onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
                         size="small"
                         sx={{
                             borderRadius: '20px',
@@ -121,7 +124,7 @@ export default function ClientHeader({ client, contact }: ClientHeaderProps) {
                 <Button
                     variant="contained"
                     startIcon={<ChatIcon sx={{ fontSize: 16 }} />}
-                    onClick={() => router.push(`/chat`)}
+                    onClick={() => router.push(`/chat?client=${client.id}`)}
                     size="small"
                     sx={{
                         borderRadius: '20px',
@@ -135,24 +138,27 @@ export default function ClientHeader({ client, contact }: ClientHeaderProps) {
                     Open Chat
                 </Button>
                 {client?.email && (
-                    <Tooltip title="Send Email">
+                    <Tooltip title={`Send Email to ${client.email}`}>
                         <IconButton
                             size="small"
                             onClick={() => window.location.href = `mailto:${client.email}`}
-                            sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0' } }}
+                            sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' } }}
                         >
                             <EmailIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
                 )}
-                <Tooltip title="Call Customer">
-                    <IconButton
-                        size="small"
-                        sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0' } }}
-                    >
-                        <PhoneIcon fontSize="small" />
-                    </IconButton>
-                </Tooltip>
+                {phone && (
+                    <Tooltip title={`Call ${phone}`}>
+                        <IconButton
+                            size="small"
+                            onClick={() => window.location.href = `tel:${phone}`}
+                            sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' } }}
+                        >
+                            <PhoneIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                )}
             </Box>
 
             <ClientEditModal
