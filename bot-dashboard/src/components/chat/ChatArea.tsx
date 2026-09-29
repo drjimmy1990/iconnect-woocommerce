@@ -15,7 +15,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import { Contact, Message, toggleFollowupStatus } from '@/lib/api';
-import { CLIENT_STATUS_CONFIG, PRODUCT_CATEGORIES, getCategoryMeta } from '@/lib/categories';
+import { CLIENT_STATUS_CONFIG, CONVERSATION_STAGE_CONFIG, PRODUCT_CATEGORIES, getCategoryMeta } from '@/lib/categories';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import PlatformAvatar from '@/components/ui/PlatformAvatar';
@@ -102,6 +102,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   const queryClient = useQueryClient();
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
+  const [stageMenuAnchor, setStageMenuAnchor] = useState<null | HTMLElement>(null);
   const [tagMenuAnchor, setTagMenuAnchor] = useState<null | HTMLElement>(null);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
 
@@ -197,6 +198,31 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     } else {
       const label = CLIENT_STATUS_CONFIG[newStatus]?.label || newStatus;
       setSnackbar({ open: true, message: `Status updated to ${label}`, severity: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+    }
+  };
+
+  // Funnel stage update handler
+  const handleUpdateStage = async (newStage: string) => {
+    setStageMenuAnchor(null);
+    if (!contact?.crm_clients?.id) return;
+    const allTags: string[] = contact.crm_clients.tags || [];
+    const cleanedTags = allTags.filter((t) => !t.toLowerCase().startsWith('stage:'));
+    const updatedTags = [...cleanedTags, `stage:${newStage}`];
+
+    const { error } = await supabase
+      .from('crm_clients')
+      .update({
+        conversation_stage: newStage,
+        tags: updatedTags,
+      })
+      .eq('id', contact.crm_clients.id);
+
+    if (error) {
+      setSnackbar({ open: true, message: 'Failed to update funnel stage', severity: 'error' });
+    } else {
+      const label = CONVERSATION_STAGE_CONFIG[newStage]?.label || newStage;
+      setSnackbar({ open: true, message: `Funnel stage set to: ${label}`, severity: 'success' });
       queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
     }
   };
@@ -414,7 +440,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   const currentStatusKey = contact.crm_clients?.client_type || 'new';
   const statusCfg = CLIENT_STATUS_CONFIG[currentStatusKey] || CLIENT_STATUS_CONFIG.new;
-  const currentTags = contact.crm_clients?.tags || [];
+
+  const allTags: string[] = contact.crm_clients?.tags || [];
+  const interestTags = allTags.filter((t) => !t.toLowerCase().startsWith('stage:'));
+  const stageTag = allTags.find((t) => t.toLowerCase().startsWith('stage:'));
+  const stageFromTag = stageTag ? stageTag.replace(/^stage:/i, '').trim().toLowerCase() : null;
+  const currentStageKey = contact.crm_clients?.conversation_stage || stageFromTag || 'first_contact';
+  const stageCfg = CONVERSATION_STAGE_CONFIG[currentStageKey] || CONVERSATION_STAGE_CONFIG.first_contact;
 
   return (
     <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
@@ -595,6 +627,36 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               />
             )}
 
+            {/* Dedicated Funnel / Conversation Stage Dropdown */}
+            {contact.crm_clients && (
+              <Chip
+                label={`${stageCfg.emoji} ${stageCfg.label}`}
+                size="small"
+                onClick={(e) => setStageMenuAnchor(e.currentTarget)}
+                deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '16px !important' }} />}
+                onDelete={(e) => setStageMenuAnchor(e.currentTarget as HTMLElement)}
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  height: 30,
+                  px: 0.5,
+                  bgcolor: alpha(stageCfg.color, 0.12),
+                  color: stageCfg.color,
+                  border: `1px solid ${alpha(stageCfg.color, 0.35)}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: alpha(stageCfg.color, 0.2),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 3px 8px ${alpha(stageCfg.color, 0.2)}`,
+                  },
+                  '& .MuiChip-deleteIcon': {
+                    color: stageCfg.color,
+                  },
+                }}
+              />
+            )}
+
             {/* Follow-up Capsule Switch */}
             <Box
               sx={{
@@ -683,7 +745,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </Typography>
           </Box>
 
-          {currentTags.map((tag) => {
+          {interestTags.map((tag) => {
             const catMeta = getCategoryMeta(tag);
             return (
               <Chip
@@ -756,6 +818,35 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         ))}
       </Menu>
 
+      {/* Funnel Stage Change Menu */}
+      <Menu
+        anchorEl={stageMenuAnchor}
+        open={Boolean(stageMenuAnchor)}
+        onClose={() => setStageMenuAnchor(null)}
+      >
+        <Typography variant="caption" sx={{ px: 2, py: 1, display: 'block', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase' }}>
+          Sales & Bot Funnel Stage:
+        </Typography>
+        {Object.entries(CONVERSATION_STAGE_CONFIG).map(([key, cfg]) => (
+          <MenuItem
+            key={key}
+            selected={currentStageKey === key}
+            onClick={() => handleUpdateStage(key)}
+            sx={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>{cfg.emoji}</span>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: currentStageKey === key ? 800 : 500 }}>
+                {cfg.label}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                {cfg.description}
+              </Typography>
+            </Box>
+          </MenuItem>
+        ))}
+      </Menu>
+
       {/* Product Categories / Tags Menu */}
       <Menu
         anchorEl={tagMenuAnchor}
@@ -767,7 +858,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           Select Product Categories:
         </Typography>
         {PRODUCT_CATEGORIES.map((cat) => {
-          const isSelected = currentTags.includes(cat.id);
+          const isSelected = interestTags.includes(cat.id);
           return (
             <MenuItem
               key={cat.id}
