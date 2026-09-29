@@ -45,70 +45,91 @@ const DeliveryIndicator: React.FC<{ status?: string; isLightText?: boolean }> = 
   }
 };
 
+export const isArabicText = (text?: string | null): boolean => {
+  if (!text) return false;
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+};
+
 /**
  * Render text with highlighted links (e.g. Telr payment, order tracking)
+ * and automatic RTL detection for Arabic text
  */
 const FormattedMessageText: React.FC<{ text: string; isLightText?: boolean }> = ({ text, isLightText = false }) => {
+  const isArabic = isArabicText(text);
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
 
   return (
-    <Typography
-      variant="body1"
-      component="div"
+    <Box
+      dir={isArabic ? 'rtl' : 'ltr'}
       sx={{
-        color: isLightText ? '#FFFFFF' : '#0F172A',
-        whiteSpace: 'pre-wrap',
-        fontSize: '0.925rem',
-        lineHeight: 1.55,
-        wordBreak: 'break-word',
+        direction: isArabic ? 'rtl' : 'ltr',
+        textAlign: isArabic ? 'right' : 'left',
+        unicodeBidi: 'plaintext',
+        width: '100%',
       }}
     >
-      {parts.map((part, index) => {
-        if (part.match(urlRegex)) {
-          const isPaymentLink = part.toLowerCase().includes('telr') || part.toLowerCase().includes('pay');
-          return (
-            <Box
-              key={index}
-              component="a"
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                color: isLightText ? '#A5B4FC' : '#4F46E5',
-                textDecoration: 'none',
-                fontWeight: 600,
-                px: 1,
-                py: 0.25,
-                borderRadius: '6px',
-                bgcolor: isLightText
-                  ? 'rgba(255, 255, 255, 0.15)'
-                  : isPaymentLink
-                  ? 'rgba(16, 185, 129, 0.12)'
-                  : 'rgba(79, 70, 229, 0.08)',
-                border: isLightText
-                  ? '1px solid rgba(255, 255, 255, 0.25)'
-                  : isPaymentLink
-                  ? '1px solid rgba(16, 185, 129, 0.3)'
-                  : '1px solid rgba(79, 70, 229, 0.15)',
-                my: 0.5,
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                  bgcolor: isLightText ? 'rgba(255, 255, 255, 0.25)' : 'rgba(79, 70, 229, 0.15)',
-                },
-              }}
-            >
-              {isPaymentLink ? '💳 Secure Payment Link' : part.length > 35 ? `${part.slice(0, 32)}...` : part}
-              <OpenInNewIcon sx={{ fontSize: 13 }} />
-            </Box>
-          );
-        }
-        return part;
-      })}
-    </Typography>
+      <Typography
+        variant="body1"
+        component="div"
+        sx={{
+          color: isLightText ? '#FFFFFF' : '#0F172A',
+          whiteSpace: 'pre-wrap',
+          fontSize: '0.925rem',
+          lineHeight: 1.65,
+          wordBreak: 'break-word',
+          direction: isArabic ? 'rtl' : 'ltr',
+          textAlign: isArabic ? 'right' : 'left',
+          fontFamily: isArabic ? '"Segoe UI", Tahoma, Arial, sans-serif' : 'inherit',
+        }}
+      >
+        {parts.map((part, index) => {
+          if (part.match(urlRegex)) {
+            const isPaymentLink = part.toLowerCase().includes('telr') || part.toLowerCase().includes('pay');
+            return (
+              <Box
+                key={index}
+                component="a"
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                dir="ltr"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  color: isLightText ? '#A5B4FC' : '#4F46E5',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '6px',
+                  bgcolor: isLightText
+                    ? 'rgba(255, 255, 255, 0.15)'
+                    : isPaymentLink
+                    ? 'rgba(16, 185, 129, 0.12)'
+                    : 'rgba(79, 70, 229, 0.08)',
+                  border: isLightText
+                    ? '1px solid rgba(255, 255, 255, 0.25)'
+                    : isPaymentLink
+                    ? '1px solid rgba(16, 185, 129, 0.3)'
+                    : '1px solid rgba(79, 70, 229, 0.15)',
+                  my: 0.5,
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: isLightText ? 'rgba(255, 255, 255, 0.25)' : 'rgba(79, 70, 229, 0.15)',
+                  },
+                }}
+              >
+                {isPaymentLink ? '💳 Secure Payment Link' : part.length > 35 ? `${part.slice(0, 32)}...` : part}
+                <OpenInNewIcon sx={{ fontSize: 13 }} />
+              </Box>
+            );
+          }
+          return part;
+        })}
+      </Typography>
+    </Box>
   );
 };
 
@@ -117,6 +138,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
   const isAgent = message.sender_type === 'agent';
   const isAi = message.sender_type === 'ai';
   const isSystem = message.sender_type === 'system';
+  const isArabic = isArabicText(message.text_content);
 
   // System messages render as centered sleek pill card
   if (isSystem) {
@@ -297,9 +319,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
       case 'document':
         return (
           <Box
+            dir={isArabic ? 'rtl' : 'ltr'}
             sx={{
               display: 'flex',
               alignItems: 'center',
+              flexDirection: isArabic ? 'row-reverse' : 'row',
               gap: 1.5,
               p: 1.25,
               borderRadius: '10px',
@@ -315,7 +339,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
             }}
           >
             <DescriptionIcon sx={{ fontSize: 32, color: isLightText ? '#A5B4FC' : 'primary.main' }} />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ flex: 1, minWidth: 0, textAlign: isArabic ? 'right' : 'left' }}>
               <Typography
                 variant="body2"
                 noWrap
@@ -351,9 +375,23 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
 
       case 'location':
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            dir={isArabic ? 'rtl' : 'ltr'}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              flexDirection: isArabic ? 'row-reverse' : 'row',
+              gap: 1,
+            }}
+          >
             <LocationOnIcon sx={{ color: 'error.main' }} />
-            <Typography variant="body2" sx={{ color: isLightText ? '#FFFFFF' : '#0F172A' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: isLightText ? '#FFFFFF' : '#0F172A',
+                textAlign: isArabic ? 'right' : 'left',
+              }}
+            >
               {text_content || 'Shared location'}
             </Typography>
           </Box>
@@ -394,51 +432,65 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
           {isAi && (
             <Box
               sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.6,
-                px: 1,
-                py: 0.25,
+                display: 'flex',
+                justifyContent: isArabic ? 'flex-end' : 'flex-start',
                 mb: 0.75,
-                borderRadius: '6px',
-                bgcolor: 'rgba(16, 185, 129, 0.12)',
-                color: '#047857',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                letterSpacing: '0.02em',
               }}
             >
               <Box
                 sx={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  bgcolor: '#10B981',
-                  boxShadow: '0 0 6px #10B981',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.6,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(16, 185, 129, 0.12)',
+                  color: '#047857',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.02em',
                 }}
-              />
-              AI ASSISTANT
+              >
+                <Box
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: '#10B981',
+                    boxShadow: '0 0 6px #10B981',
+                  }}
+                />
+                AI ASSISTANT
+              </Box>
             </Box>
           )}
 
           {isAgent && (
             <Box
               sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                px: 1,
-                py: 0.25,
+                display: 'flex',
+                justifyContent: isArabic ? 'flex-end' : 'flex-start',
                 mb: 0.75,
-                borderRadius: '6px',
-                bgcolor: 'rgba(255, 255, 255, 0.18)',
-                color: '#FFFFFF',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
               }}
             >
-              SUPPORT AGENT
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: '6px',
+                  bgcolor: 'rgba(255, 255, 255, 0.18)',
+                  color: '#FFFFFF',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                SUPPORT AGENT
+              </Box>
             </Box>
           )}
 

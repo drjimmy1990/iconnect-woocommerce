@@ -299,6 +299,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={disabled || isSending || isUploading}
             multiline
             maxRows={4}
+            inputProps={{
+              dir: 'auto',
+            }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 p: '6px 8px',

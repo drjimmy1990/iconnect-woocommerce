@@ -342,6 +342,7 @@ const ContactList: React.FC<ContactListProps> = ({
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
                           <Typography
                             noWrap
+                            dir="auto"
                             sx={{
                               fontWeight: isSelected ? 700 : 600,
                               fontSize: '0.88rem',
@@ -368,12 +369,14 @@ const ContactList: React.FC<ContactListProps> = ({
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                           <Typography
                             noWrap
+                            dir="auto"
                             variant="body2"
                             sx={{
                               color: '#64748B',
                               fontSize: '0.78rem',
                               lineHeight: 1.4,
                               flex: 1,
+                              textAlign: 'start',
                             }}
                           >
                             {contact.last_message_preview || 'No messages yet'}
