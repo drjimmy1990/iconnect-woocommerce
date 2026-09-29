@@ -5,7 +5,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, CircularProgress, IconButton, Tooltip, Alert, Snackbar,
-  Chip, Menu, MenuItem, alpha, Stack, FormControlLabel, Switch, ListItemIcon, ListItemText,
+  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -18,6 +18,10 @@ import { Contact, Message, toggleFollowupStatus } from '@/lib/api';
 import { CLIENT_STATUS_CONFIG, PRODUCT_CATEGORIES, getCategoryMeta } from '@/lib/categories';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import PlatformAvatar from '@/components/ui/PlatformAvatar';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useMediaUpload, getContentTypeFromMime } from '@/hooks/useMediaUpload';
@@ -288,13 +292,85 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     }
   };
 
+  const handleCopy = (text: string, label: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setSnackbar({ open: true, message: `${label} copied to clipboard!`, severity: 'success' });
+    }
+  };
+
   if (!contactId) {
     return (
-      <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3, bgcolor: 'background.default' }}>
-        <Paper elevation={0} sx={{ p: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'transparent' }}>
-          <ChatIcon sx={{ fontSize: 60, color: 'text.secondary' }} />
-          <Typography variant="h5">Select a Conversation</Typography>
-          <Typography color="text.secondary">Choose a contact from the list on the left to view their messages.</Typography>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 3,
+        }}
+        className="chat-background"
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            p: 5,
+            maxWidth: 480,
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: 'rgba(255, 255, 255, 0.88)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(226, 232, 240, 0.8)',
+            borderRadius: '24px',
+            boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.06)',
+          }}
+        >
+          <Box
+            sx={{
+              width: 72,
+              height: 72,
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%)',
+              border: '1px solid rgba(79, 70, 229, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#4F46E5',
+              boxShadow: '0 6px 20px rgba(79, 70, 229, 0.15)',
+            }}
+          >
+            <ForumOutlinedIcon sx={{ fontSize: 36 }} />
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A', mt: 1 }}>
+            Live Omnichannel Chat
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748B', lineHeight: 1.6 }}>
+            Select an active customer conversation from the list to view message history, reply via smart templates, or manage CRM lead stages.
+          </Typography>
+          <Box
+            sx={{
+              mt: 1,
+              px: 2,
+              py: 1,
+              borderRadius: '12px',
+              bgcolor: 'rgba(241, 245, 249, 0.8)',
+              border: '1px solid #E2E8F0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <Typography variant="caption" sx={{ color: '#475569', fontWeight: 500 }}>
+              💡 <strong>Pro Tip:</strong> Press <kbd style={{ background: '#CBD5E1', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 700 }}>/</kbd> in the input bar to access quick sales templates
+            </Typography>
+          </Box>
         </Paper>
       </Box>
     );
@@ -312,124 +388,277 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
   return (
     <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      <Box sx={{ px: 2, py: 1.2, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-        {/* Row 1: Name + Unified Status + Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1rem' }}>
-              {contact.name || 'Unknown Contact'}
-            </Typography>
+      {/* Contact Header Bar */}
+      <Box
+        sx={{
+          px: { xs: 2, md: 3 },
+          py: 1.5,
+          bgcolor: 'rgba(255, 255, 255, 0.88)',
+          backdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+          flexShrink: 0,
+          zIndex: 10,
+        }}
+      >
+        {/* Row 1: Contact Avatar + Name + Platform Badge + Status Selector + Actions */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
+            <PlatformAvatar
+              platform={contact.platform}
+              sx={{
+                width: 42,
+                height: 42,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                border: '2px solid #FFFFFF',
+              }}
+            />
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#0F172A', lineHeight: 1.2 }}>
+                  {contact.name || contact.platform_user_id || 'Unknown Contact'}
+                </Typography>
+                <Chip
+                  label={contact.platform.toUpperCase()}
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    bgcolor:
+                      contact.platform === 'whatsapp'
+                        ? 'rgba(37, 211, 102, 0.12)'
+                        : contact.platform === 'instagram'
+                        ? 'rgba(225, 48, 108, 0.12)'
+                        : 'rgba(24, 119, 242, 0.12)',
+                    color:
+                      contact.platform === 'whatsapp'
+                        ? '#15803D'
+                        : contact.platform === 'instagram'
+                        ? '#BE185D'
+                        : '#1D4ED8',
+                    border: '1px solid',
+                    borderColor:
+                      contact.platform === 'whatsapp'
+                        ? 'rgba(37, 211, 102, 0.3)'
+                        : contact.platform === 'instagram'
+                        ? 'rgba(225, 48, 108, 0.3)'
+                        : 'rgba(24, 119, 242, 0.3)',
+                  }}
+                />
+              </Box>
 
-            {/* Single Unified Client Status Chip */}
+              {/* ID & Phone row with click-to-copy */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.35 }}>
+                <Tooltip title="Click to copy platform ID">
+                  <Box
+                    onClick={() => handleCopy(contact.platform_user_id, 'Platform ID')}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      cursor: 'pointer',
+                      color: '#64748B',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      '&:hover': { color: '#4F46E5' },
+                    }}
+                  >
+                    <span>ID: {contact.platform_user_id}</span>
+                    <ContentCopyIcon sx={{ fontSize: 12, opacity: 0.7 }} />
+                  </Box>
+                </Tooltip>
+
+                {contact.crm_clients?.phone && (
+                  <Tooltip title="Click to copy phone number">
+                    <Box
+                      onClick={() => handleCopy(contact.crm_clients!.phone!, 'Phone number')}
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        cursor: 'pointer',
+                        color: '#64748B',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        '&:hover': { color: '#10B981' },
+                      }}
+                    >
+                      <PhoneIcon sx={{ fontSize: 13, color: '#10B981' }} />
+                      <span>{contact.crm_clients.phone}</span>
+                      <ContentCopyIcon sx={{ fontSize: 12, opacity: 0.7 }} />
+                    </Box>
+                  </Tooltip>
+                )}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Right Header Actions */}
+          <Stack direction="row" spacing={1} alignItems="center">
+            {/* Unified Client Status Dropdown */}
             {contact.crm_clients && (
               <Chip
                 label={`${statusCfg.emoji} ${statusCfg.label}`}
                 size="small"
                 onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '16px !important' }} />}
+                onDelete={(e) => setStatusMenuAnchor(e.currentTarget as HTMLElement)}
                 sx={{
                   fontWeight: 600,
-                  fontSize: '0.75rem',
-                  height: 26,
+                  fontSize: '0.78rem',
+                  height: 30,
+                  px: 0.5,
                   bgcolor: alpha(statusCfg.color, 0.12),
                   color: statusCfg.color,
                   border: `1px solid ${alpha(statusCfg.color, 0.35)}`,
                   cursor: 'pointer',
-                  '&:hover': { bgcolor: alpha(statusCfg.color, 0.22) },
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: alpha(statusCfg.color, 0.2),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 3px 8px ${alpha(statusCfg.color, 0.2)}`,
+                  },
+                  '& .MuiChip-deleteIcon': {
+                    color: statusCfg.color,
+                  },
                 }}
               />
             )}
-          </Box>
 
-          <Stack direction="row" spacing={0} alignItems="center">
-            <FormControlLabel
-              control={
-                <Switch
-                  size="small"
-                  checked={contact.is_followup_active}
-                  onChange={(e) => toggleFollowup({ contactId: contact.id, newStatus: e.target.checked })}
-                  disabled={isTogglingFollowup}
-                  color="success"
-                />
-              }
-              label={
-                <Typography variant="caption" sx={{ fontWeight: 500, mr: 1 }}>
-                  Follow-ups
-                </Typography>
-              }
-              labelPlacement="start"
-              sx={{ m: 0, mr: 1 }}
-            />
-            <Tooltip title="View CRM Profile">
+            {/* Follow-up Capsule Switch */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                px: 1.25,
+                py: 0.2,
+                borderRadius: '20px',
+                bgcolor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(241, 245, 249, 0.8)',
+                border: '1px solid',
+                borderColor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.3)' : '#E2E8F0',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  color: contact.is_followup_active ? '#065F46' : '#64748B',
+                  mr: 0.5,
+                }}
+              >
+                Follow-ups
+              </Typography>
+              <Switch
+                size="small"
+                checked={contact.is_followup_active}
+                onChange={(e) => toggleFollowup({ contactId: contact.id, newStatus: e.target.checked })}
+                disabled={isTogglingFollowup}
+                color="success"
+              />
+            </Box>
+
+            {/* CRM Profile Shortcut */}
+            <Tooltip title="Open CRM Profile">
               <span>
-                <IconButton onClick={handleViewProfile} disabled={!contact.crm_clients?.id} aria-label="view profile" size="small">
+                <IconButton
+                  onClick={handleViewProfile}
+                  disabled={!contact.crm_clients?.id}
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(79, 70, 229, 0.08)',
+                    color: '#4F46E5',
+                    border: '1px solid rgba(79, 70, 229, 0.2)',
+                    '&:hover': {
+                      bgcolor: 'rgba(79, 70, 229, 0.16)',
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: 'transparent',
+                      borderColor: 'transparent',
+                    },
+                  }}
+                >
                   <PersonIcon fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
+
+            {/* Delete Contact */}
             <Tooltip title="Delete Contact">
-              <IconButton onClick={handleDelete} color="error" aria-label="delete contact" size="small">
+              <IconButton
+                onClick={handleDelete}
+                size="small"
+                sx={{
+                  color: '#94A3B8',
+                  '&:hover': {
+                    color: '#EF4444',
+                    bgcolor: 'rgba(239, 68, 68, 0.1)',
+                  },
+                }}
+              >
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           </Stack>
         </Box>
 
-        {/* Row 2: Metadata & Category Interest Tags */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mt: 0.75 }}>
-          <Typography variant="caption" color="text.secondary">
-            {contact.platform_user_id}
-          </Typography>
-          {contact.crm_clients?.phone && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-              <PhoneIcon sx={{ fontSize: 12 }} /> {contact.crm_clients.phone}
+        {/* Row 2: Category & Interest Tags */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#94A3B8' }}>
+            <LocalOfferIcon sx={{ fontSize: 13 }} />
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748B', fontSize: '0.72rem' }}>
+              Interests:
             </Typography>
-          )}
-
-          {/* Product Category & Interest Tags */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.6 }}>
-            <LocalOfferIcon sx={{ fontSize: 13, color: 'text.disabled', ml: 0.5 }} />
-            {currentTags.map((tag) => {
-              const catMeta = getCategoryMeta(tag);
-              return (
-                <Chip
-                  key={tag}
-                  label={catMeta ? `${catMeta.emoji} ${catMeta.name}` : tag}
-                  size="small"
-                  onDelete={() => handleRemoveTag(tag)}
-                  sx={{
-                    fontSize: '0.7rem',
-                    height: 22,
-                    fontWeight: 500,
-                    bgcolor: catMeta ? alpha(catMeta.color, 0.1) : 'action.hover',
-                    color: catMeta ? catMeta.color : 'text.primary',
-                    border: `1px solid ${catMeta ? alpha(catMeta.color, 0.3) : 'divider'}`,
-                    '& .MuiChip-deleteIcon': {
-                      fontSize: 14,
-                      color: catMeta ? catMeta.color : 'text.secondary',
-                      '&:hover': { color: 'error.main' },
-                    },
-                  }}
-                />
-              );
-            })}
-
-            {/* Add Category / Tag Button */}
-            <Chip
-              icon={<AddIcon sx={{ fontSize: '13px !important' }} />}
-              label="Add Category"
-              size="small"
-              variant="outlined"
-              onClick={(e) => setTagMenuAnchor(e.currentTarget)}
-              sx={{
-                fontSize: '0.68rem',
-                height: 22,
-                cursor: 'pointer',
-                borderStyle: 'dashed',
-                color: 'text.secondary',
-                '&:hover': { bgcolor: 'action.hover', color: 'primary.main', borderColor: 'primary.main' },
-              }}
-            />
           </Box>
+
+          {currentTags.map((tag) => {
+            const catMeta = getCategoryMeta(tag);
+            return (
+              <Chip
+                key={tag}
+                label={catMeta ? `${catMeta.emoji} ${catMeta.name}` : tag}
+                size="small"
+                onDelete={() => handleRemoveTag(tag)}
+                sx={{
+                  fontSize: '0.72rem',
+                  height: 24,
+                  fontWeight: 600,
+                  bgcolor: catMeta ? alpha(catMeta.color, 0.1) : 'rgba(241, 245, 249, 0.8)',
+                  color: catMeta ? catMeta.color : '#334155',
+                  border: `1px solid ${catMeta ? alpha(catMeta.color, 0.3) : '#CBD5E1'}`,
+                  borderRadius: '6px',
+                  '& .MuiChip-deleteIcon': {
+                    fontSize: 14,
+                    color: catMeta ? catMeta.color : '#64748B',
+                    '&:hover': { color: 'error.main' },
+                  },
+                }}
+              />
+            );
+          })}
+
+          <Chip
+            icon={<AddIcon sx={{ fontSize: '13px !important' }} />}
+            label="Add Category"
+            size="small"
+            variant="outlined"
+            onClick={(e) => setTagMenuAnchor(e.currentTarget)}
+            sx={{
+              fontSize: '0.7rem',
+              height: 24,
+              cursor: 'pointer',
+              borderStyle: 'dashed',
+              borderColor: '#94A3B8',
+              color: '#64748B',
+              borderRadius: '6px',
+              '&:hover': {
+                bgcolor: 'rgba(79, 70, 229, 0.08)',
+                color: '#4F46E5',
+                borderColor: '#4F46E5',
+              },
+            }}
+          />
         </Box>
       </Box>
 
@@ -489,9 +718,48 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         })}
       </Menu>
 
-      <Box ref={scrollableContainerRef} sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }} className="chat-background">
+      {/* Messages Scroll Area */}
+      <Box ref={scrollableContainerRef} sx={{ flexGrow: 1, overflowY: 'auto', p: { xs: 2, md: 3 } }} className="chat-background">
         {isLoadingMessages ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: 200 }}>
+            <CircularProgress size={32} />
+          </Box>
+        ) : messages.length === 0 ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              minHeight: 280,
+              gap: 1.5,
+              textAlign: 'center',
+              p: 3,
+            }}
+          >
+            <Box
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                bgcolor: 'rgba(241, 245, 249, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94A3B8',
+                border: '1px solid #E2E8F0',
+              }}
+            >
+              <ChatIcon sx={{ fontSize: 26 }} />
+            </Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#334155' }}>
+              No messages yet
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#94A3B8', maxWidth: 360 }}>
+              Send a message or select a quick template below to start the conversation with {contact.name || contact.platform_user_id}.
+            </Typography>
+          </Box>
         ) : (
           messages.map((msg) => (<MessageBubble key={msg.id} message={msg} platform={contact.platform} />))
         )}

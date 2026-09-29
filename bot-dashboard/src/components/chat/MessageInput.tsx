@@ -132,48 +132,88 @@ const MessageInput: React.FC<MessageInputProps> = ({
       <Box
         sx={{
           p: 2,
-          backgroundColor: 'background.paper',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
+          bgcolor: '#FFFFFF',
+          borderTop: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 -4px 16px -2px rgba(15, 23, 42, 0.04)',
         }}
       >
-        {/* Cancel button */}
-        <Tooltip title="Cancel recording">
-          <IconButton onClick={onCancelRecording} color="error" size="small">
-            <CloseIcon />
-          </IconButton>
-        </Tooltip>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            p: 1.25,
+            px: 2,
+            borderRadius: '24px',
+            bgcolor: 'rgba(239, 68, 68, 0.06)',
+            border: '1.5px solid rgba(239, 68, 68, 0.25)',
+          }}
+        >
+          {/* Cancel button */}
+          <Tooltip title="Cancel recording">
+            <IconButton
+              onClick={onCancelRecording}
+              size="small"
+              sx={{
+                color: '#EF4444',
+                bgcolor: 'rgba(239, 68, 68, 0.12)',
+                '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.2)' },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
 
-        {/* Recording indicator */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-          <FiberManualRecordIcon
-            sx={{
-              fontSize: 14,
-              color: 'error.main',
-              animation: 'pulse 1.5s ease-in-out infinite',
-              '@keyframes pulse': {
-                '0%, 100%': { opacity: 1 },
-                '50%': { opacity: 0.3 },
-              },
-            }}
-          />
-          <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 500 }}>
-            Recording...
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-            {formatRecordingTime(recordingDuration)}
-          </Typography>
+          {/* Recording indicator */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flex: 1 }}>
+            <FiberManualRecordIcon
+              sx={{
+                fontSize: 16,
+                color: '#EF4444',
+                animation: 'pulse 1.2s ease-in-out infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                  '50%': { opacity: 0.3, transform: 'scale(0.85)' },
+                },
+              }}
+            />
+            <Typography variant="body2" sx={{ color: '#DC2626', fontWeight: 600 }}>
+              Recording voice note...
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#0F172A',
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                px: 1,
+                py: 0.2,
+                borderRadius: '6px',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+              }}
+            >
+              {formatRecordingTime(recordingDuration)}
+            </Typography>
+          </Box>
+
+          {/* Stop & send button */}
+          <Tooltip title="Stop and send">
+            <IconButton
+              onClick={onStopRecording}
+              sx={{
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.35)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  transform: 'scale(1.05)',
+                },
+              }}
+            >
+              <StopCircleIcon />
+            </IconButton>
+          </Tooltip>
         </Box>
-
-        {/* Stop & send button */}
-        <Tooltip title="Stop and send">
-          <IconButton onClick={onStopRecording} color="primary" sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' } }}>
-            <StopCircleIcon />
-          </IconButton>
-        </Tooltip>
       </Box>
     );
   }
@@ -192,72 +232,142 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
       <Box
         sx={{
-          p: 2,
-          backgroundColor: 'background.paper',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
+          p: { xs: 1.5, md: 2 },
+          bgcolor: '#FFFFFF',
+          borderTop: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 -4px 16px -2px rgba(15, 23, 42, 0.03)',
         }}
       >
-        {/* Attachment menu button */}
-        <IconButton onClick={handleOpenMenu} disabled={disabled || isSending || isUploading}>
-          <AttachmentIcon />
-        </IconButton>
-
-        {/* ⚡ Templates button */}
-        <Tooltip title="Quick replies (or type /)">
-          <IconButton
-            ref={templateBtnRef}
-            onClick={(e) => setTemplateAnchor(e.currentTarget)}
-            disabled={disabled || isSending || isUploading}
-            sx={{
-              color: 'warning.main',
-              '&:hover': { bgcolor: 'warning.light', color: 'warning.dark' },
-            }}
-          >
-            <BoltIcon />
-          </IconButton>
-        </Tooltip>
-
-        {/* Text input */}
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Type your message... (/ for templates)"
-          size="small"
-          value={value}
-          onChange={onChange}
-          onKeyPress={handleKeyPress}
-          onKeyDown={handleKeyDown}
-          disabled={disabled || isSending || isUploading}
-          multiline
-          maxRows={4}
-        />
-
-        {/* Mic button (when no text) / Send button (when text) */}
-        {value.trim() ? (
-          <IconButton
-            color="primary"
-            onClick={onSendText}
-            disabled={disabled || isSending || isUploading || !value.trim()}
-          >
-            <SendIcon />
-          </IconButton>
-        ) : (
-          <Tooltip title="Record voice message">
-            <span>
-              <IconButton
-                color="default"
-                onClick={onStartRecording}
-                disabled={disabled || isSending || isUploading || !onStartRecording}
-              >
-                <MicIcon />
-              </IconButton>
-            </span>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            p: '4px 6px',
+            borderRadius: '24px',
+            bgcolor: '#F8FAFC',
+            border: '1.5px solid #E2E8F0',
+            transition: 'all 0.2s ease',
+            '&:focus-within': {
+              bgcolor: '#FFFFFF',
+              borderColor: '#4F46E5',
+              boxShadow: '0 0 0 3px rgba(79, 70, 229, 0.1)',
+            },
+          }}
+        >
+          {/* Attachment menu button */}
+          <Tooltip title="Attach media or file">
+            <IconButton
+              onClick={handleOpenMenu}
+              disabled={disabled || isSending || isUploading}
+              size="small"
+              sx={{
+                color: '#64748B',
+                '&:hover': { color: '#4F46E5', bgcolor: 'rgba(79, 70, 229, 0.08)' },
+              }}
+            >
+              <AttachmentIcon fontSize="small" />
+            </IconButton>
           </Tooltip>
-        )}
+
+          {/* ⚡ Templates button */}
+          <Tooltip title="Quick reply templates (or type /)">
+            <IconButton
+              ref={templateBtnRef}
+              onClick={(e) => setTemplateAnchor(e.currentTarget)}
+              disabled={disabled || isSending || isUploading}
+              size="small"
+              sx={{
+                color: '#D97706',
+                bgcolor: 'rgba(245, 158, 11, 0.1)',
+                '&:hover': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: '#B45309' },
+              }}
+            >
+              <BoltIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          {/* Text input */}
+          <TextField
+            fullWidth
+            placeholder="Type your message... (type / for sales templates)"
+            size="small"
+            value={value}
+            onChange={onChange}
+            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
+            disabled={disabled || isSending || isUploading}
+            multiline
+            maxRows={4}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                p: '6px 8px',
+                '& fieldset': { border: 'none' },
+                '&:hover fieldset': { border: 'none' },
+                '&.Mui-focused fieldset': { border: 'none' },
+              },
+              '& .MuiInputBase-input': {
+                fontSize: '0.9rem',
+                color: '#0F172A',
+                '&::placeholder': {
+                  color: '#94A3B8',
+                  opacity: 1,
+                },
+              },
+            }}
+          />
+
+          {/* Mic button (when no text) / Send button (when text) */}
+          {value.trim() ? (
+            <Tooltip title="Send message (Enter)">
+              <span>
+                <IconButton
+                  onClick={onSendText}
+                  disabled={disabled || isSending || isUploading || !value.trim()}
+                  sx={{
+                    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                    color: '#FFFFFF',
+                    width: 36,
+                    height: 36,
+                    boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #4338CA 0%, #3730A3 100%)',
+                      transform: 'scale(1.05)',
+                    },
+                    '&.Mui-disabled': {
+                      background: '#CBD5E1',
+                      color: '#FFFFFF',
+                    },
+                  }}
+                >
+                  <SendIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Record voice note">
+              <span>
+                <IconButton
+                  onClick={onStartRecording}
+                  disabled={disabled || isSending || isUploading || !onStartRecording}
+                  size="small"
+                  sx={{
+                    color: '#64748B',
+                    width: 36,
+                    height: 36,
+                    '&:hover': {
+                      color: '#4F46E5',
+                      bgcolor: 'rgba(79, 70, 229, 0.08)',
+                    },
+                  }}
+                >
+                  <MicIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
 
       {/* Hidden file input */}

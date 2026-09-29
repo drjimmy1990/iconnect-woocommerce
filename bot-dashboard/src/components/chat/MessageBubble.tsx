@@ -3,8 +3,8 @@ import React from 'react';
 import { Box, Paper, Typography, Avatar, Chip } from '@mui/material';
 import { Message } from '@/lib/api';
 import PlatformAvatar from '@/components/ui/PlatformAvatar';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DescriptionIcon from '@mui/icons-material/Description';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -12,19 +12,13 @@ import DoneIcon from '@mui/icons-material/Done';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AudioPlayer from './AudioPlayer';
 
 interface MessageBubbleProps {
   message: Message;
   platform: 'whatsapp' | 'facebook' | 'instagram' | string;
 }
-
-const formatDuration = (seconds?: number): string => {
-  if (!seconds) return '';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-};
 
 const formatFileSize = (bytes?: number): string => {
   if (!bytes) return '';
@@ -33,22 +27,89 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const DeliveryIndicator: React.FC<{ status?: string }> = ({ status }) => {
+const DeliveryIndicator: React.FC<{ status?: string; isLightText?: boolean }> = ({ status, isLightText = false }) => {
   const iconSx = { fontSize: '0.85rem', ml: 0.5, verticalAlign: 'middle' };
   switch (status) {
     case 'pending':
-      return <ScheduleIcon sx={{ ...iconSx, color: 'text.disabled' }} />;
+      return <ScheduleIcon sx={{ ...iconSx, color: isLightText ? 'rgba(255,255,255,0.6)' : 'text.disabled' }} />;
     case 'sent':
-      return <DoneIcon sx={{ ...iconSx, color: 'text.secondary' }} />;
+      return <DoneIcon sx={{ ...iconSx, color: isLightText ? 'rgba(255,255,255,0.7)' : 'text.secondary' }} />;
     case 'delivered':
-      return <DoneAllIcon sx={{ ...iconSx, color: 'text.secondary' }} />;
+      return <DoneAllIcon sx={{ ...iconSx, color: isLightText ? 'rgba(255,255,255,0.7)' : 'text.secondary' }} />;
     case 'read':
-      return <DoneAllIcon sx={{ ...iconSx, color: '#4FC3F7' }} />;
+      return <DoneAllIcon sx={{ ...iconSx, color: isLightText ? '#67E8F9' : '#0284C7' }} />;
     case 'failed':
       return <ErrorOutlineIcon sx={{ ...iconSx, color: 'error.main' }} />;
     default:
       return null;
   }
+};
+
+/**
+ * Render text with highlighted links (e.g. Telr payment, order tracking)
+ */
+const FormattedMessageText: React.FC<{ text: string; isLightText?: boolean }> = ({ text, isLightText = false }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return (
+    <Typography
+      variant="body1"
+      component="div"
+      sx={{
+        color: isLightText ? '#FFFFFF' : '#0F172A',
+        whiteSpace: 'pre-wrap',
+        fontSize: '0.925rem',
+        lineHeight: 1.55,
+        wordBreak: 'break-word',
+      }}
+    >
+      {parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+          const isPaymentLink = part.toLowerCase().includes('telr') || part.toLowerCase().includes('pay');
+          return (
+            <Box
+              key={index}
+              component="a"
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                color: isLightText ? '#A5B4FC' : '#4F46E5',
+                textDecoration: 'none',
+                fontWeight: 600,
+                px: 1,
+                py: 0.25,
+                borderRadius: '6px',
+                bgcolor: isLightText
+                  ? 'rgba(255, 255, 255, 0.15)'
+                  : isPaymentLink
+                  ? 'rgba(16, 185, 129, 0.12)'
+                  : 'rgba(79, 70, 229, 0.08)',
+                border: isLightText
+                  ? '1px solid rgba(255, 255, 255, 0.25)'
+                  : isPaymentLink
+                  ? '1px solid rgba(16, 185, 129, 0.3)'
+                  : '1px solid rgba(79, 70, 229, 0.15)',
+                my: 0.5,
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  bgcolor: isLightText ? 'rgba(255, 255, 255, 0.25)' : 'rgba(79, 70, 229, 0.15)',
+                },
+              }}
+            >
+              {isPaymentLink ? '💳 Secure Payment Link' : part.length > 35 ? `${part.slice(0, 32)}...` : part}
+              <OpenInNewIcon sx={{ fontSize: 13 }} />
+            </Box>
+          );
+        }
+        return part;
+      })}
+    </Typography>
+  );
 };
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
@@ -57,22 +118,26 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
   const isAi = message.sender_type === 'ai';
   const isSystem = message.sender_type === 'system';
 
-  // System messages render as centered info cards
+  // System messages render as centered sleek pill card
   if (isSystem) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, px: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', my: 1.5, px: 4 }}>
         <Chip
-          icon={<InfoOutlinedIcon />}
-          label={message.text_content || 'System message'}
-          variant="outlined"
+          icon={<InfoOutlinedIcon sx={{ fontSize: '15px !important', color: '#64748B' }} />}
+          label={message.text_content || 'System notification'}
           size="small"
           sx={{
-            maxWidth: '80%',
+            maxWidth: '85%',
             height: 'auto',
-            '& .MuiChip-label': { whiteSpace: 'normal', py: 0.5 },
-            color: 'text.secondary',
-            borderColor: 'divider',
+            py: 0.5,
+            px: 1,
+            '& .MuiChip-label': { whiteSpace: 'normal' },
+            bgcolor: 'rgba(241, 245, 249, 0.9)',
+            border: '1px solid #E2E8F0',
+            color: '#475569',
             fontSize: '0.75rem',
+            fontWeight: 500,
+            backdropFilter: 'blur(8px)',
           }}
         />
       </Box>
@@ -80,57 +145,86 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
   }
 
   const getAvatar = () => {
-    if (isUser) return <PlatformAvatar platform={platform} sx={{ width: 32, height: 32 }} />;
-    if (isAgent) return <Avatar sx={{ bgcolor: 'secondary.main', width: 32, height: 32 }}><AccountCircleIcon /></Avatar>;
-    if (isAi) return <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}><SmartToyIcon /></Avatar>;
+    if (isUser) {
+      return (
+        <PlatformAvatar
+          platform={platform}
+          sx={{
+            width: 32,
+            height: 32,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          }}
+        />
+      );
+    }
+    if (isAgent) {
+      return (
+        <Avatar
+          sx={{
+            background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+            width: 32,
+            height: 32,
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+          }}
+        >
+          <SupportAgentIcon sx={{ fontSize: 18, color: '#fff' }} />
+        </Avatar>
+      );
+    }
+    if (isAi) {
+      return (
+        <Avatar
+          sx={{
+            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            width: 32,
+            height: 32,
+            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+          }}
+        >
+          <AutoAwesomeIcon sx={{ fontSize: 17, color: '#fff' }} />
+        </Avatar>
+      );
+    }
     return <Avatar sx={{ width: 32, height: 32 }} />;
   };
 
-  // Define bubble colors for better management
-  const userBubbleColor = '#FFFFFF';
-  const agentBubbleColor = '#E1F5FE'; // Light blue for agent
-  const aiBubbleColor = '#E8F5E9'; // Light green for AI
-
-  const bubbleStyles = {
-    p: '8px 12px',
-    borderRadius: '18px',
-    position: 'relative', // Needed for the tail
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
-    maxWidth: '450px',
+  // Modern Asymmetric Bubble Styles
+  const baseBubbleStyles = {
+    p: '10px 14px',
+    maxWidth: '520px',
     wordWrap: 'break-word',
-    '&::after': { // This pseudo-element creates the tail
-      content: '""',
-      position: 'absolute',
-      bottom: '0px',
-      width: '0px',
-      height: '0px',
-      border: '10px solid transparent',
-    }
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   };
 
+  // Customer: Crisp White with subtle outline & rounded asymmetric corner
   const userBubbleStyles = {
-    ...bubbleStyles,
-    bgcolor: userBubbleColor,
-    borderBottomLeftRadius: '4px',
-    '&::after': {
-      ...bubbleStyles['&::after'],
-      left: '-10px',
-      borderRightColor: userBubbleColor,
-      borderRightWidth: '12px'
-    }
+    ...baseBubbleStyles,
+    bgcolor: '#FFFFFF',
+    border: '1px solid #E2E8F0',
+    borderRadius: '18px 18px 18px 4px',
+    boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05), 0 1px 3px -1px rgba(15, 23, 42, 0.03)',
   };
 
-  const sentBubbleStyles = {
-    ...bubbleStyles,
-    bgcolor: isAi ? aiBubbleColor : agentBubbleColor,
-    borderBottomRightRadius: '4px',
-    '&::after': {
-      ...bubbleStyles['&::after'],
-      right: '-10px',
-      borderLeftColor: isAi ? aiBubbleColor : agentBubbleColor,
-      borderLeftWidth: '12px'
-    }
+  // AI Assistant: Frosted Emerald/Indigo with micro-badge
+  const aiBubbleStyles = {
+    ...baseBubbleStyles,
+    background: 'linear-gradient(135deg, #F0FDF4 0%, #F8FAFC 100%)',
+    border: '1px solid rgba(16, 185, 129, 0.22)',
+    borderRadius: '18px 18px 4px 18px',
+    boxShadow: '0 4px 14px -2px rgba(16, 185, 129, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.03)',
   };
+
+  // Human Agent: Solid Electric Indigo with clean white contrast
+  const agentBubbleStyles = {
+    ...baseBubbleStyles,
+    background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+    border: 'none',
+    borderRadius: '18px 18px 4px 18px',
+    boxShadow: '0 4px 16px -2px rgba(79, 70, 229, 0.3)',
+  };
+
+  const currentBubbleStyles = isUser ? userBubbleStyles : isAi ? aiBubbleStyles : agentBubbleStyles;
+  const isLightText = isAgent;
 
   const renderContent = () => {
     const { content_type, text_content, attachment_url, attachment_metadata } = message;
@@ -147,17 +241,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
                 sx={{
                   mt: text_content ? 1 : 0,
                   width: '100%',
-                  maxWidth: '300px',
-                  borderRadius: 2,
+                  maxWidth: '340px',
+                  borderRadius: '12px',
                   cursor: 'pointer',
+                  border: isLightText ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E2E8F0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  transition: 'transform 0.2s ease',
+                  '&:hover': { transform: 'scale(1.01)' },
                 }}
                 onClick={() => window.open(attachment_url, '_blank')}
               />
             )}
             {text_content && (
-              <Typography variant="body1" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', mt: 1 }}>
-                {text_content}
-              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <FormattedMessageText text={text_content} isLightText={isLightText} />
+              </Box>
             )}
           </>
         );
@@ -181,16 +279,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
                 src={attachment_url}
                 sx={{
                   width: '100%',
-                  maxWidth: '300px',
-                  borderRadius: 2,
+                  maxWidth: '340px',
+                  borderRadius: '12px',
                   mt: text_content ? 1 : 0,
+                  border: isLightText ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E2E8F0',
                 }}
               />
             )}
             {text_content && (
-              <Typography variant="body1" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', mt: 1 }}>
-                {text_content}
-              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <FormattedMessageText text={text_content} isLightText={isLightText} />
+              </Box>
             )}
           </>
         );
@@ -202,23 +301,33 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
               display: 'flex',
               alignItems: 'center',
               gap: 1.5,
-              p: 1,
-              borderRadius: 1,
-              bgcolor: 'rgba(0,0,0,0.04)',
+              p: 1.25,
+              borderRadius: '10px',
+              bgcolor: isLightText ? 'rgba(255,255,255,0.12)' : 'rgba(241, 245, 249, 0.8)',
+              border: isLightText ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E2E8F0',
               cursor: 'pointer',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.08)' },
+              '&:hover': {
+                bgcolor: isLightText ? 'rgba(255,255,255,0.2)' : 'rgba(226, 232, 240, 0.8)',
+              },
             }}
             onClick={() => {
               if (attachment_url) window.open(attachment_url, '_blank');
             }}
           >
-            <DescriptionIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+            <DescriptionIcon sx={{ fontSize: 32, color: isLightText ? '#A5B4FC' : 'primary.main' }} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+              <Typography
+                variant="body2"
+                noWrap
+                sx={{ fontWeight: 600, color: isLightText ? '#FFFFFF' : '#0F172A' }}
+              >
                 {attachment_metadata?.file_name || 'Document'}
               </Typography>
               {attachment_metadata?.file_size && (
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: isLightText ? 'rgba(255,255,255,0.7)' : 'text.secondary' }}
+                >
                   {formatFileSize(attachment_metadata.file_size)}
                 </Typography>
               )}
@@ -244,7 +353,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <LocationOnIcon sx={{ color: 'error.main' }} />
-            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+            <Typography variant="body2" sx={{ color: isLightText ? '#FFFFFF' : '#0F172A' }}>
               {text_content || 'Shared location'}
             </Typography>
           </Box>
@@ -253,11 +362,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
       case 'text':
       default:
         return text_content ? (
-          <Typography variant="body1" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap' }}>
-            {text_content}
-          </Typography>
+          <FormattedMessageText text={text_content} isLightText={isLightText} />
         ) : (
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+          <Typography variant="body2" sx={{ color: isLightText ? 'rgba(255,255,255,0.7)' : 'text.secondary', fontStyle: 'italic' }}>
             [Unsupported message type: {content_type}]
           </Typography>
         );
@@ -276,16 +383,68 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
         sx={{
           display: 'flex',
           flexDirection: isUser ? 'row' : 'row-reverse',
-          alignItems: 'flex-end', // Align to bottom for better tail placement
-          gap: 1.5,
+          alignItems: 'flex-end',
+          gap: 1.25,
+          maxWidth: '85%',
         }}
       >
         {getAvatar()}
-        <Paper
-          elevation={0} // Using our own shadow
-          sx={isUser ? userBubbleStyles : sentBubbleStyles}
-        >
+        <Paper elevation={0} sx={currentBubbleStyles}>
+          {/* Header micro-badges for AI and Agent */}
+          {isAi && (
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.6,
+                px: 1,
+                py: 0.25,
+                mb: 0.75,
+                borderRadius: '6px',
+                bgcolor: 'rgba(16, 185, 129, 0.12)',
+                color: '#047857',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: '#10B981',
+                  boxShadow: '0 0 6px #10B981',
+                }}
+              />
+              AI ASSISTANT
+            </Box>
+          )}
+
+          {isAgent && (
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                px: 1,
+                py: 0.25,
+                mb: 0.75,
+                borderRadius: '6px',
+                bgcolor: 'rgba(255, 255, 255, 0.18)',
+                color: '#FFFFFF',
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+              }}
+            >
+              SUPPORT AGENT
+            </Box>
+          )}
+
           {renderContent()}
+
+          {/* Timestamp and delivery indicator */}
           <Typography
             variant="caption"
             sx={{
@@ -293,12 +452,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
               alignItems: 'center',
               justifyContent: 'flex-end',
               mt: 0.5,
-              color: 'text.secondary',
-              fontSize: '0.7rem' // Smaller timestamp
+              color: isLightText ? 'rgba(255, 255, 255, 0.75)' : '#94A3B8',
+              fontSize: '0.68rem',
+              fontWeight: 500,
             }}
           >
             {new Date(message.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            {!isUser && <DeliveryIndicator status={message.delivery_status} />}
+            {!isUser && <DeliveryIndicator status={message.delivery_status} isLightText={isLightText} />}
           </Typography>
         </Paper>
       </Box>
@@ -306,4 +466,4 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, platform }) => {
   );
 };
 
-export default React.memo(MessageBubble);
+export default React.memo(MessageBubble);
