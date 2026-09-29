@@ -23,27 +23,31 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import DnsIcon from '@mui/icons-material/Dns';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupsIcon from '@mui/icons-material/Groups';
-
+import BoltIcon from '@mui/icons-material/Bolt';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
-const drawerWidth = 240;
+const drawerWidth = 250;
 
 const menuItems = [
   { text: 'Home', href: '/', icon: <HomeIcon />, page: 'home' },
-  { text: 'Chat', href: '/chat', icon: <ChatIcon />, page: 'chat' },
-  { text: 'Clients', href: '/clients', icon: <PeopleIcon />, page: 'clients' },
+  { text: 'Live Chat', href: '/chat', icon: <ChatIcon />, page: 'chat' },
+  { text: 'Clients & CRM', href: '/clients', icon: <PeopleIcon />, page: 'clients' },
   { text: 'Channels', href: '/channels', icon: <DnsIcon />, page: 'channels' },
-  { text: 'Settings', href: '/settings', icon: <SettingsIcon />, page: 'settings' },
   { text: 'Analytics', href: '/analytics', icon: <AnalyticsIcon />, page: 'analytics' },
   { text: 'Team', href: '/team', icon: <GroupsIcon />, page: 'team' },
+  { text: 'Settings', href: '/settings', icon: <SettingsIcon />, page: 'settings' },
 ];
 
 const openedMixin = (theme: Theme): CSSObject => ({
   width: drawerWidth,
+  backgroundColor: '#FFFFFF',
+  borderRight: '1px solid rgba(226, 232, 240, 0.85)',
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.enteringScreen,
@@ -52,6 +56,8 @@ const openedMixin = (theme: Theme): CSSObject => ({
 });
 
 const closedMixin = (theme: Theme): CSSObject => ({
+  backgroundColor: '#FFFFFF',
+  borderRight: '1px solid rgba(226, 232, 240, 0.85)',
   transition: theme.transitions.create('width', {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -66,8 +72,9 @@ const closedMixin = (theme: Theme): CSSObject => ({
 const DrawerHeader = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
-  padding: theme.spacing(0, 1),
+  justifyContent: 'space-between',
+  padding: theme.spacing(0, 2),
+  minHeight: 64,
   ...theme.mixins.toolbar,
 }));
 
@@ -104,50 +111,207 @@ export default function AppSidebar() {
 
   return (
     <Drawer variant="permanent" open={isSidebarOpen}>
-      <DrawerHeader>
-        <IconButton onClick={toggleSidebar}>
-          <ChevronLeftIcon />
-        </IconButton>
-      </DrawerHeader>
-      <Divider />
-      <List>
-        {visibleItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              component={Link}
-              href={item.href}
-              selected={pathname.startsWith(item.href) && item.href !== '/'}
-              // Special case for home page to avoid it always being selected
-              {...(item.href === '/' && { selected: pathname === '/' })}
-              sx={{ minHeight: 48, justifyContent: isSidebarOpen ? 'initial' : 'center', px: 2.5 }}
+      <DrawerHeader sx={{ px: isSidebarOpen ? 2.5 : 1.5 }}>
+        {isSidebarOpen ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden' }}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                flexShrink: 0,
+              }}
             >
-              <ListItemIcon sx={{ minWidth: 0, mr: isSidebarOpen ? 3 : 'auto', justifyContent: 'center' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} sx={{ opacity: isSidebarOpen ? 1 : 0 }} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+              <BoltIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  fontWeight: 800,
+                  fontSize: '1rem',
+                  letterSpacing: '-0.02em',
+                  color: '#0F172A',
+                  lineHeight: 1.2,
+                }}
+              >
+                iConnect
+              </Typography>
+              <Chip
+                label="AI BOT"
+                size="small"
+                sx={{
+                  height: 16,
+                  fontSize: '0.6rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  bgcolor: 'rgba(79, 70, 229, 0.08)',
+                  color: 'primary.main',
+                  borderRadius: '3px',
+                  px: 0.2,
+                }}
+              />
+            </Box>
+          </Box>
+        ) : (
+          <Box
+            onClick={toggleSidebar}
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+              cursor: 'pointer',
+              mx: 'auto',
+            }}
+          >
+            <BoltIcon sx={{ fontSize: 20 }} />
+          </Box>
+        )}
+
+        {isSidebarOpen && (
+          <IconButton
+            onClick={toggleSidebar}
+            size="small"
+            sx={{
+              borderRadius: '8px',
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'rgba(79, 70, 229, 0.06)', color: 'primary.main' },
+            }}
+          >
+            <ChevronLeftIcon fontSize="small" />
+          </IconButton>
+        )}
+      </DrawerHeader>
+
+      <Divider sx={{ borderColor: 'rgba(226, 232, 240, 0.8)' }} />
+
+      <List sx={{ px: 1.2, py: 1.5 }}>
+        {visibleItems.map((item) => {
+          const isSelected = item.href === '/'
+            ? pathname === '/'
+            : pathname.startsWith(item.href);
+
+          return (
+            <ListItem key={item.text} disablePadding sx={{ display: 'block', mb: 0.5 }}>
+              <Tooltip title={!isSidebarOpen ? item.text : ''} placement="right" arrow>
+                <ListItemButton
+                  component={Link}
+                  href={item.href}
+                  selected={isSelected}
+                  sx={{
+                    minHeight: 44,
+                    justifyContent: isSidebarOpen ? 'initial' : 'center',
+                    px: isSidebarOpen ? 2 : 1.5,
+                    borderRadius: '10px',
+                    transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                    ...(isSelected
+                      ? {
+                          background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(99, 102, 241, 0.04) 100%)',
+                          color: 'primary.main',
+                          fontWeight: 700,
+                          borderLeft: isSidebarOpen ? '3px solid #4F46E5' : 'none',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.16) 0%, rgba(99, 102, 241, 0.06) 100%)',
+                          },
+                        }
+                      : {
+                          color: '#475569',
+                          '&:hover': {
+                            bgcolor: 'rgba(79, 70, 229, 0.04)',
+                            color: 'primary.main',
+                            '& .MuiListItemIcon-root': {
+                              color: 'primary.main',
+                            },
+                          },
+                        }),
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: isSidebarOpen ? 2 : 'auto',
+                      justifyContent: 'center',
+                      color: isSelected ? 'primary.main' : '#64748B',
+                      transition: 'color 0.15s ease',
+                      '& svg': { fontSize: 20 },
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    primaryTypographyProps={{
+                      fontSize: '0.875rem',
+                      fontWeight: isSelected ? 700 : 500,
+                    }}
+                    sx={{ opacity: isSidebarOpen ? 1 : 0 }}
+                  />
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
+          );
+        })}
       </List>
 
       {/* Push logout to bottom */}
       <Box sx={{ flexGrow: 1 }} />
-      <Divider />
-      <List>
+      <Divider sx={{ borderColor: 'rgba(226, 232, 240, 0.8)' }} />
+      <List sx={{ px: 1.2, py: 1 }}>
         <ListItem disablePadding sx={{ display: 'block' }}>
-          <Tooltip title="Logout" placement="right" disableHoverListener={isSidebarOpen}>
+          <Tooltip title={!isSidebarOpen ? 'Logout' : ''} placement="right" arrow>
             <ListItemButton
               onClick={handleLogout}
-              sx={{ minHeight: 48, justifyContent: isSidebarOpen ? 'initial' : 'center', px: 2.5 }}
+              sx={{
+                minHeight: 44,
+                justifyContent: isSidebarOpen ? 'initial' : 'center',
+                px: isSidebarOpen ? 2 : 1.5,
+                borderRadius: '10px',
+                color: '#64748B',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                  bgcolor: 'rgba(239, 68, 68, 0.06)',
+                  color: 'error.main',
+                  '& .MuiListItemIcon-root': {
+                    color: 'error.main',
+                  },
+                },
+              }}
             >
-              <ListItemIcon sx={{ minWidth: 0, mr: isSidebarOpen ? 3 : 'auto', justifyContent: 'center', color: 'error.main' }}>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: isSidebarOpen ? 2 : 'auto',
+                  justifyContent: 'center',
+                  color: '#64748B',
+                  '& svg': { fontSize: 20 },
+                }}
+              >
                 <LogoutIcon />
               </ListItemIcon>
-              <ListItemText primary="Logout" sx={{ opacity: isSidebarOpen ? 1 : 0, color: 'error.main' }} />
+              <ListItemText
+                primary="Logout"
+                primaryTypographyProps={{
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                }}
+                sx={{ opacity: isSidebarOpen ? 1 : 0 }}
+              />
             </ListItemButton>
           </Tooltip>
         </ListItem>
       </List>
     </Drawer>
   );
-}
+}

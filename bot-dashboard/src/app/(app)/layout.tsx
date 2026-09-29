@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ChannelProvider>
       <NotificationProvider>
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
           <AppHeader /> 
           <AppSidebar />
           
@@ -29,17 +29,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               height: '100vh',
               display: 'flex',
               flexDirection: 'column',
+              bgcolor: 'background.default',
+              overflow: 'hidden',
             }}
           >
             {/* Spacer for the fixed AppHeader */}
-            <Box sx={(theme) => ({ ...theme.mixins.toolbar })} /> 
+            <Box sx={{ minHeight: '64px' }} /> 
             
             {/* Container for the actual page content */}
             <Box 
               sx={{ 
                 flexGrow: 1,
                 overflow: 'auto', 
-                p: isChatPage ? 0 : 3,
+                p: isChatPage ? 0 : { xs: 2, sm: 3 },
+                maxWidth: isChatPage ? '100%' : '1600px',
+                width: '100%',
+                mx: 'auto',
               }}
             >
               <PageGuard>
@@ -51,4 +56,4 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </NotificationProvider>
     </ChannelProvider>
   );
-}
+}
