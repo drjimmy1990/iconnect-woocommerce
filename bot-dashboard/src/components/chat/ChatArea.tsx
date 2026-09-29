@@ -5,7 +5,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, CircularProgress, IconButton, Tooltip, Alert, Snackbar,
-  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText, Button,
+  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText, Button, Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -14,8 +14,11 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
-import { Contact, Message, toggleFollowupStatus } from '@/lib/api';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { Contact, Message, toggleFollowupStatus, toggleAiStatus } from '@/lib/api';
 import { CLIENT_STATUS_CONFIG, CONVERSATION_STAGE_CONFIG, PRODUCT_CATEGORIES, getCategoryMeta } from '@/lib/categories';
+import { resolveClientPhone, formatPhoneDisplay } from '@/utils/phone';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import PlatformAvatar from '@/components/ui/PlatformAvatar';
@@ -147,6 +150,22 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     onError: (err: Error) => {
       setSnackbar({ open: true, message: err.message || 'Error updating status', severity: 'error' });
     }
+  });
+
+  const { mutate: toggleAi, isPending: isTogglingAi } = useMutation({
+    mutationFn: toggleAiStatus,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      setSnackbar({
+        open: true,
+        message: `AI Bot ${variables.newStatus ? 'enabled' : 'paused'} for this contact`,
+        severity: 'success',
+      });
+    },
+    onError: (err: Error) => {
+      setSnackbar({ open: true, message: err.message || 'Error updating AI status', severity: 'error' });
+    },
   });
 
   const scrollToBottom = () => { if (scrollableContainerRef.current) { scrollableContainerRef.current.scrollTop = scrollableContainerRef.current.scrollHeight; } };
@@ -448,14 +467,17 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const currentStageKey = contact.crm_clients?.conversation_stage || stageFromTag || 'first_contact';
   const stageCfg = CONVERSATION_STAGE_CONFIG[currentStageKey] || CONVERSATION_STAGE_CONFIG.first_contact;
 
+  const clientPhone = resolveClientPhone(contact.crm_clients as any, contact);
+  const formattedClientPhone = clientPhone ? formatPhoneDisplay(clientPhone) : null;
+
   return (
     <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
       {/* Contact Header Bar */}
       <Box
         sx={{
           px: { xs: 2, md: 3 },
-          py: 1.5,
-          bgcolor: 'rgba(255, 255, 255, 0.88)',
+          py: 1.25,
+          bgcolor: 'rgba(255, 255, 255, 0.92)',
           backdropFilter: 'blur(16px)',
           borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
           flexShrink: 0,
@@ -550,7 +572,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               </Box>
 
               {/* ID & Phone row with click-to-copy */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.35 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.35, flexWrap: 'wrap' }}>
                 <Tooltip title="Click to copy platform ID">
                   <Box
                     onClick={() => handleCopy(contact.platform_user_id, 'Platform ID')}
@@ -570,10 +592,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                   </Box>
                 </Tooltip>
 
-                {contact.crm_clients?.phone && (
+                {formattedClientPhone && (
                   <Tooltip title="Click to copy phone number">
                     <Box
-                      onClick={() => handleCopy(contact.crm_clients!.phone!, 'Phone number')}
+                      onClick={() => handleCopy(clientPhone!, 'Phone number')}
                       sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -586,7 +608,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                       }}
                     >
                       <PhoneIcon sx={{ fontSize: 13, color: '#10B981' }} />
-                      <span>{contact.crm_clients.phone}</span>
+                      <span>{formattedClientPhone}</span>
                       <ContentCopyIcon sx={{ fontSize: 12, opacity: 0.7 }} />
                     </Box>
                   </Tooltip>
@@ -595,145 +617,251 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             </Box>
           </Box>
 
-          {/* Right Header Actions */}
-          <Stack direction="row" spacing={1} alignItems="center">
-            {/* Unified Client Status Dropdown */}
+          {/* Right Header Actions: Grouped into CRM Stages, Automations Deck, and Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25 }}>
+            {/* 1. CRM Stages Cluster */}
             {contact.crm_clients && (
-              <Chip
-                label={`${statusCfg.emoji} ${statusCfg.label}`}
-                size="small"
-                onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
-                deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '16px !important' }} />}
-                onDelete={(e) => setStatusMenuAnchor(e.currentTarget as HTMLElement)}
+              <Box
                 sx={{
-                  fontWeight: 600,
-                  fontSize: '0.78rem',
-                  height: 30,
-                  px: 0.5,
-                  bgcolor: alpha(statusCfg.color, 0.12),
-                  color: statusCfg.color,
-                  border: `1px solid ${alpha(statusCfg.color, 0.35)}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    bgcolor: alpha(statusCfg.color, 0.2),
-                    transform: 'translateY(-1px)',
-                    boxShadow: `0 3px 8px ${alpha(statusCfg.color, 0.2)}`,
-                  },
-                  '& .MuiChip-deleteIcon': {
-                    color: statusCfg.color,
-                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.75,
+                  p: 0.35,
+                  px: 0.75,
+                  borderRadius: '10px',
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
                 }}
-              />
+              >
+                {/* Unified Client Status Dropdown */}
+                <Tooltip title="Customer Lifecycle Stage — Click to change">
+                  <Chip
+                    label={`${statusCfg.emoji} ${statusCfg.label}`}
+                    size="small"
+                    onClick={(e) => setStatusMenuAnchor(e.currentTarget)}
+                    deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '15px !important' }} />}
+                    onDelete={(e) => setStatusMenuAnchor(e.currentTarget as HTMLElement)}
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.74rem',
+                      height: 28,
+                      px: 0.5,
+                      bgcolor: alpha(statusCfg.color, 0.12),
+                      color: statusCfg.color,
+                      border: `1px solid ${alpha(statusCfg.color, 0.35)}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        bgcolor: alpha(statusCfg.color, 0.22),
+                        transform: 'translateY(-1px)',
+                        boxShadow: `0 2px 6px ${alpha(statusCfg.color, 0.25)}`,
+                      },
+                      '& .MuiChip-deleteIcon': {
+                        color: statusCfg.color,
+                      },
+                    }}
+                  />
+                </Tooltip>
+
+                {/* Dedicated Funnel / Conversation Stage Dropdown */}
+                <Tooltip title="AI Sales Funnel Stage — Click to change">
+                  <Chip
+                    label={`${stageCfg.emoji} ${stageCfg.label}`}
+                    size="small"
+                    onClick={(e) => setStageMenuAnchor(e.currentTarget)}
+                    deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '15px !important' }} />}
+                    onDelete={(e) => setStageMenuAnchor(e.currentTarget as HTMLElement)}
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: '0.74rem',
+                      height: 28,
+                      px: 0.5,
+                      bgcolor: alpha(stageCfg.color, 0.12),
+                      color: stageCfg.color,
+                      border: `1px solid ${alpha(stageCfg.color, 0.35)}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        bgcolor: alpha(stageCfg.color, 0.22),
+                        transform: 'translateY(-1px)',
+                        boxShadow: `0 2px 6px ${alpha(stageCfg.color, 0.25)}`,
+                      },
+                      '& .MuiChip-deleteIcon': {
+                        color: stageCfg.color,
+                      },
+                    }}
+                  />
+                </Tooltip>
+              </Box>
             )}
 
-            {/* Dedicated Funnel / Conversation Stage Dropdown */}
-            {contact.crm_clients && (
-              <Chip
-                label={`${stageCfg.emoji} ${stageCfg.label}`}
-                size="small"
-                onClick={(e) => setStageMenuAnchor(e.currentTarget)}
-                deleteIcon={<KeyboardArrowDownIcon sx={{ fontSize: '16px !important' }} />}
-                onDelete={(e) => setStageMenuAnchor(e.currentTarget as HTMLElement)}
-                sx={{
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  height: 30,
-                  px: 0.5,
-                  bgcolor: alpha(stageCfg.color, 0.12),
-                  color: stageCfg.color,
-                  border: `1px solid ${alpha(stageCfg.color, 0.35)}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    bgcolor: alpha(stageCfg.color, 0.2),
-                    transform: 'translateY(-1px)',
-                    boxShadow: `0 3px 8px ${alpha(stageCfg.color, 0.2)}`,
-                  },
-                  '& .MuiChip-deleteIcon': {
-                    color: stageCfg.color,
-                  },
-                }}
-              />
-            )}
-
-            {/* Follow-up Capsule Switch */}
+            {/* 2. Bot & Automations Deck (AI Bot + Follow-ups) */}
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                px: 1.25,
-                py: 0.2,
-                borderRadius: '20px',
-                bgcolor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(241, 245, 249, 0.8)',
-                border: '1px solid',
-                borderColor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.3)' : '#E2E8F0',
+                gap: 0.5,
+                p: 0.35,
+                px: 0.75,
+                borderRadius: '10px',
+                bgcolor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
               }}
             >
-              <Typography
-                variant="caption"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '0.75rem',
-                  color: contact.is_followup_active ? '#065F46' : '#64748B',
-                  mr: 0.5,
-                }}
+              {/* AI Bot Toggle */}
+              <Tooltip
+                title={
+                  contact.ai_enabled
+                    ? 'AI Agent is actively responding to customer messages — Click switch to pause'
+                    : 'AI Agent is paused for this contact — Click switch to enable'
+                }
               >
-                Follow-ups
-              </Typography>
-              <Switch
-                size="small"
-                checked={contact.is_followup_active}
-                onChange={(e) => toggleFollowup({ contactId: contact.id, newStatus: e.target.checked })}
-                disabled={isTogglingFollowup}
-                color="success"
-              />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: '8px',
+                    bgcolor: contact.ai_enabled ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                    border: '1px solid',
+                    borderColor: contact.ai_enabled ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <SmartToyOutlinedIcon
+                      sx={{
+                        fontSize: 16,
+                        color: contact.ai_enabled ? '#4F46E5' : '#94A3B8',
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '0.74rem',
+                        color: contact.ai_enabled ? '#3730A3' : '#64748B',
+                      }}
+                    >
+                      AI Bot
+                    </Typography>
+                  </Box>
+                  <Switch
+                    size="small"
+                    checked={Boolean(contact.ai_enabled)}
+                    onChange={(e) => toggleAi({ contactId: contact.id, newStatus: e.target.checked })}
+                    disabled={isTogglingAi}
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked': { color: '#4F46E5' },
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#4F46E5' },
+                    }}
+                  />
+                </Box>
+              </Tooltip>
+
+              <Divider orientation="vertical" flexItem sx={{ my: 0.5, borderColor: '#CBD5E1' }} />
+
+              {/* Follow-up Capsule Switch */}
+              <Tooltip
+                title={
+                  contact.is_followup_active
+                    ? 'Automated re-engagement follow-ups are active for this contact'
+                    : 'Automated follow-ups are paused'
+                }
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    px: 0.8,
+                    py: 0.2,
+                    borderRadius: '8px',
+                    bgcolor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                    border: '1px solid',
+                    borderColor: contact.is_followup_active ? 'rgba(16, 185, 129, 0.25)' : 'transparent',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AccessTimeIcon
+                      sx={{
+                        fontSize: 15,
+                        color: contact.is_followup_active ? '#059669' : '#94A3B8',
+                      }}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: '0.74rem',
+                        color: contact.is_followup_active ? '#065F46' : '#64748B',
+                      }}
+                    >
+                      Follow-ups
+                    </Typography>
+                  </Box>
+                  <Switch
+                    size="small"
+                    checked={Boolean(contact.is_followup_active)}
+                    onChange={(e) => toggleFollowup({ contactId: contact.id, newStatus: e.target.checked })}
+                    disabled={isTogglingFollowup}
+                    color="success"
+                  />
+                </Box>
+              </Tooltip>
             </Box>
 
-            {/* Customer Insights Drawer Toggle */}
-            <Tooltip title="Open Customer Insights & Orders">
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => setIsInsightsOpen(true)}
-                startIcon={<PersonIcon sx={{ fontSize: 16 }} />}
-                sx={{
-                  borderRadius: '20px',
-                  textTransform: 'none',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  py: 0.35,
-                  px: 1.25,
-                  borderColor: 'rgba(79, 70, 229, 0.3)',
-                  color: '#4F46E5',
-                  bgcolor: 'rgba(79, 70, 229, 0.05)',
-                  '&:hover': {
-                    bgcolor: 'rgba(79, 70, 229, 0.12)',
-                    borderColor: '#4F46E5',
-                  },
-                }}
-              >
-                Insights
-              </Button>
-            </Tooltip>
+            {/* 3. Customer Insights & Actions */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Tooltip title="Open Customer Insights & Orders">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setIsInsightsOpen(true)}
+                  startIcon={<PersonIcon sx={{ fontSize: 15 }} />}
+                  sx={{
+                    borderRadius: '10px',
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    py: 0.45,
+                    px: 1.25,
+                    borderColor: 'rgba(79, 70, 229, 0.3)',
+                    color: '#4F46E5',
+                    bgcolor: 'rgba(79, 70, 229, 0.05)',
+                    '&:hover': {
+                      bgcolor: 'rgba(79, 70, 229, 0.12)',
+                      borderColor: '#4F46E5',
+                      transform: 'translateY(-1px)',
+                    },
+                  }}
+                >
+                  Insights
+                </Button>
+              </Tooltip>
 
-            {/* Delete Contact */}
-            <Tooltip title="Delete Contact">
-              <IconButton
-                onClick={handleDelete}
-                size="small"
-                sx={{
-                  color: '#94A3B8',
-                  '&:hover': {
-                    color: '#EF4444',
-                    bgcolor: 'rgba(239, 68, 68, 0.1)',
-                  },
-                }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+              <Tooltip title="Delete Contact">
+                <IconButton
+                  onClick={handleDelete}
+                  size="small"
+                  sx={{
+                    color: '#94A3B8',
+                    borderRadius: '8px',
+                    p: 0.5,
+                    '&:hover': {
+                      color: '#EF4444',
+                      bgcolor: 'rgba(239, 68, 68, 0.1)',
+                    },
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
         </Box>
 
         {/* Row 2: Category & Interest Tags */}
