@@ -22,6 +22,14 @@ import { useUI } from '@/providers/UIProvider';
 import { useChannel } from '@/providers/ChannelProvider';
 import PlatformAvatar from '@/components/ui/PlatformAvatar';
 import NotificationBell from './NotificationBell';
+import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useAuth } from '@/providers/AuthProvider';
 
 const drawerWidth = 250;
 
@@ -57,6 +65,21 @@ export default function AppHeader() {
   const { isSidebarOpen, toggleSidebar } = useUI();
   const { activeChannel, channels } = useChannel();
   const pathname = usePathname();
+  const { user, profile, signOut } = useAuth();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSignOut = async () => {
+    handleCloseUserMenu();
+    await signOut();
+  };
 
   // Helper to determine contextual header title based on current route
   const getRouteHeader = () => {
@@ -272,7 +295,7 @@ export default function AppHeader() {
           </Box>
         </Box>
 
-        {/* Right Actions: Notifications */}
+        {/* Right Actions: Notifications & User Profile */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box
             sx={{
@@ -284,6 +307,112 @@ export default function AppHeader() {
           >
             <NotificationBell />
           </Box>
+
+          {user && (
+            <>
+              <Box
+                onClick={handleOpenUserMenu}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 1.2,
+                  py: 0.5,
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(226, 232, 240, 0.9)',
+                  bgcolor: 'rgba(248, 250, 252, 0.85)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 70, 229, 0.06)',
+                    borderColor: 'rgba(79, 70, 229, 0.3)',
+                  },
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    bgcolor: 'primary.main',
+                    color: '#FFFFFF',
+                  }}
+                >
+                  {(profile?.full_name || user.email || 'A').charAt(0).toUpperCase()}
+                </Avatar>
+                <Box sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'left' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.75rem', color: '#1E293B', lineHeight: 1.2 }}>
+                    {profile?.full_name || user.email?.split('@')[0]}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.65rem', display: 'block', fontWeight: 600 }}>
+                    {profile?.role ? profile.role.toUpperCase() : 'ADMIN'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleCloseUserMenu}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                slotProps={{
+                  paper: {
+                    elevation: 4,
+                    sx: {
+                      mt: 1,
+                      minWidth: 220,
+                      borderRadius: '12px',
+                      border: '1px solid rgba(226, 232, 240, 0.8)',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                      p: 0.5,
+                    },
+                  },
+                }}
+              >
+                <Box sx={{ px: 2, py: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>
+                    {profile?.full_name || 'System Admin'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', wordBreak: 'break-all', display: 'block', mt: 0.3 }}>
+                    {user.email}
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <Chip
+                      label={profile?.role ? profile.role.toUpperCase() : 'ADMIN'}
+                      size="small"
+                      sx={{
+                        height: 18,
+                        fontSize: '0.625rem',
+                        fontWeight: 700,
+                        bgcolor: 'rgba(79, 70, 229, 0.1)',
+                        color: 'primary.main',
+                        borderRadius: '4px',
+                      }}
+                    />
+                  </Box>
+                </Box>
+                <Divider sx={{ my: 0.5 }} />
+                <MenuItem
+                  onClick={handleSignOut}
+                  sx={{
+                    borderRadius: '8px',
+                    color: 'error.main',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    gap: 1.5,
+                    '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.08)' },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'error.main', minWidth: 24 }}>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary="Log Out" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Box>
       </Toolbar>
     </AppBar>

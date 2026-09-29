@@ -28,9 +28,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Clean up any stale sessions on login page load
+  // Clean up any stale sessions or redirect if already authenticated
   useEffect(() => {
-    // Ensure clean state if navigated to login
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && session.expires_at && session.expires_at * 1000 > Date.now()) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectUrl = searchParams.get('redirect') || '/';
+        window.location.href = redirectUrl;
+      }
+    });
   }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -52,7 +58,9 @@ export default function LoginPage() {
 
       if (data?.session) {
         // Full page navigation guarantees fresh session cookies are sent with HTTP headers to Next.js middleware
-        window.location.href = '/';
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectUrl = searchParams.get('redirect') || '/';
+        window.location.href = redirectUrl;
       } else {
         setIsLoading(false);
       }

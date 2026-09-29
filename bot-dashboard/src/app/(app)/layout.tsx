@@ -7,6 +7,7 @@ import Box from '@mui/material/Box';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
 import PageGuard from '@/components/auth/PageGuard';
+import AuthGuard from '@/components/auth/AuthGuard';
 import { ChannelProvider } from '@/providers/ChannelProvider';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 
@@ -15,8 +16,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isChatPage = pathname.startsWith('/chat');
 
   return (
-    <ChannelProvider>
-      <NotificationProvider>
+    <AuthGuard>
+      <ChannelProvider>
+        <NotificationProvider>
         <Box sx={{ display: 'flex', bgcolor: 'background.default', minHeight: '100vh' }}>
           <AppHeader /> 
           <AppSidebar />
@@ -55,5 +57,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Box>
       </NotificationProvider>
     </ChannelProvider>
+  </AuthGuard>
   );
 }
