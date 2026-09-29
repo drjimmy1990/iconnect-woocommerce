@@ -338,9 +338,12 @@ const ContactList: React.FC<ContactListProps> = ({
                     </ListItemAvatar>
 
                     <ListItemText
+                      primaryTypographyProps={{ component: 'div' }}
+                      secondaryTypographyProps={{ component: 'div' }}
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
                           <Typography
+                            component="span"
                             noWrap
                             dir="auto"
                             sx={{
@@ -353,6 +356,7 @@ const ContactList: React.FC<ContactListProps> = ({
                             {contact.name || contact.platform_user_id}
                           </Typography>
                           <Typography
+                            component="span"
                             variant="caption"
                             sx={{
                               color: '#94A3B8',
@@ -368,6 +372,7 @@ const ContactList: React.FC<ContactListProps> = ({
                       secondary={
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                           <Typography
+                            component="span"
                             noWrap
                             dir="auto"
                             variant="body2"
@@ -377,12 +382,14 @@ const ContactList: React.FC<ContactListProps> = ({
                               lineHeight: 1.4,
                               flex: 1,
                               textAlign: 'start',
+                              display: 'block',
                             }}
                           >
                             {contact.last_message_preview || 'No messages yet'}
                           </Typography>
                           {contact.unread_count > 0 && (
                             <Box
+                              component="span"
                               sx={{
                                 px: 0.75,
                                 py: 0.15,
