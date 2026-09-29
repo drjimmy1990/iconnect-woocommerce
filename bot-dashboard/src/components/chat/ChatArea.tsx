@@ -22,6 +22,7 @@ import PlatformAvatar from '@/components/ui/PlatformAvatar';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useMediaUpload, getContentTypeFromMime } from '@/hooks/useMediaUpload';
@@ -61,6 +62,8 @@ interface ChatAreaProps {
   }) => void;
   isSendingMessage: boolean;
   onDeleteContact: (id: string) => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -72,6 +75,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onSendMedia,
   isSendingMessage,
   onDeleteContact,
+  isSidebarCollapsed = false,
+  onToggleSidebar,
 }) => {
   const router = useRouter();
   const [messageText, setMessageText] = useState('');
@@ -315,6 +320,29 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         }}
         className="chat-background"
       >
+        {isSidebarCollapsed && onToggleSidebar && (
+          <Tooltip title="Show Conversations">
+            <IconButton
+              onClick={onToggleSidebar}
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 14,
+                left: 14,
+                zIndex: 20,
+                color: '#64748B',
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                border: '1px solid #E2E8F0',
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                backdropFilter: 'blur(8px)',
+                '&:hover': { color: '#4F46E5', bgcolor: '#F8FAFC' },
+              }}
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
         <Paper
           elevation={0}
           sx={{
@@ -402,7 +430,24 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       >
         {/* Row 1: Contact Avatar + Name + Platform Badge + Status Selector + Actions */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {isSidebarCollapsed && onToggleSidebar && (
+              <Tooltip title="Show Conversations">
+                <IconButton
+                  onClick={onToggleSidebar}
+                  size="small"
+                  sx={{
+                    color: '#64748B',
+                    bgcolor: 'rgba(241, 245, 249, 0.9)',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    '&:hover': { color: '#4F46E5', bgcolor: 'rgba(79, 70, 229, 0.08)', borderColor: 'rgba(79, 70, 229, 0.3)' },
+                  }}
+                >
+                  <MenuIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <PlatformAvatar
               platform={contact.platform}
               sx={{

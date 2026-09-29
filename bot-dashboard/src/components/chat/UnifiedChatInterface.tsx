@@ -109,32 +109,25 @@ export default function UnifiedChatInterface() {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', width: '100%' }}>
+    <Box sx={{ display: 'flex', height: '100%', width: '100%', position: 'relative' }}>
       <Box
         sx={{
-          width: isContactListOpen ? 320 : 0,
+          width: isContactListOpen ? 330 : 0,
           overflow: 'hidden',
           flexShrink: 0,
-          transition: 'width 0.3s ease-in-out',
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           height: '100%',
         }}
       >
         <ContactList
           selectedContactId={selectedContactId}
           onSelectContact={setSelectedContactId}
+          onToggleCollapse={toggleContactList}
         />
       </Box>
 
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Box sx={{ p: 0.5, backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
-          <Tooltip title={isContactListOpen ? "Hide Contacts" : "Show Contacts"}>
-            <IconButton onClick={toggleContactList}>
-              {isContactListOpen ? <MenuOpenIcon /> : <MenuIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
-          {/* We'll need to adapt ChatArea to work with just an ID */}
           <ChatArea
             contactId={selectedContactId}
             messages={messages}
@@ -144,6 +137,8 @@ export default function UnifiedChatInterface() {
             onSendMedia={handleSendMedia}
             isSendingMessage={isSendingMessage}
             onDeleteContact={deleteContact}
+            isSidebarCollapsed={!isContactListOpen}
+            onToggleSidebar={toggleContactList}
           />
         </Box>
       </Box>

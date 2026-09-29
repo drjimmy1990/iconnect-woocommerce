@@ -6,7 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Box, IconButton, Tooltip, CircularProgress } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import ContactList from "@/components/chat/ContactList";
 import ChatArea from "@/components/chat/ChatArea";
 import { useChannel } from '@/providers/ChannelProvider';
@@ -34,7 +33,7 @@ export default function ChatPage() {
 
       try {
         // Query the DB to find which contact belongs to this client
-        const { data, error: _error } = await supabase
+        const { data } = await supabase
           .from('crm_clients')
           .select('contact_id')
           .eq('id', linkedClientId)
@@ -119,30 +118,24 @@ export default function ChatPage() {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: '100%', width: '100%' }}>
+    <Box sx={{ display: 'flex', height: '100%', width: '100%', position: 'relative' }}>
       <Box
         sx={{
-          width: isContactListOpen ? 320 : 0,
+          width: isContactListOpen ? 330 : 0,
           overflow: 'hidden',
           flexShrink: 0,
-          transition: 'width 0.2s ease-in-out',
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           height: '100%',
         }}
       >
         <ContactList
           selectedContactId={selectedContactId}
           onSelectContact={setSelectedContactId}
+          onToggleCollapse={toggleContactList}
         />
       </Box>
 
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Box sx={{ p: 0.5, backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0, height: '49px' }}>
-          <Tooltip title={isContactListOpen ? "Hide Contacts" : "Show Contacts"}>
-            <IconButton onClick={toggleContactList}>
-              {isContactListOpen ? <MenuOpenIcon /> : <MenuIcon />}
-            </IconButton>
-          </Tooltip>
-        </Box>
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
         <Box sx={{ flexGrow: 1, position: 'relative' }}>
           <ChatArea
             contactId={selectedContactId}
@@ -153,6 +146,8 @@ export default function ChatPage() {
             onSendMedia={handleSendMedia}
             isSendingMessage={isSendingMessage}
             onDeleteContact={deleteContact}
+            isSidebarCollapsed={!isContactListOpen}
+            onToggleSidebar={toggleContactList}
           />
         </Box>
       </Box>
