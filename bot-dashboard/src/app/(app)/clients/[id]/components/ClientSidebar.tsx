@@ -12,7 +12,6 @@ import {
   IconButton,
   Button,
   TextField,
-  InputAdornment,
   Paper,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
@@ -24,14 +23,12 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import LaunchIcon from '@mui/icons-material/Launch';
 import AddIcon from '@mui/icons-material/Add';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import SellOutlinedIcon from '@mui/icons-material/SellOutlined';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { CrmClient, Contact } from '@/lib/api';
 import { UpdateClientPayload } from '@/hooks/useClient';
 import { resolveClientPhone, getWhatsAppNumber, formatPhoneDisplay } from '@/utils/phone';
-import { getCategoryMeta, PRODUCT_CATEGORIES } from '@/lib/categories';
+import { getCategoryMeta } from '@/lib/categories';
 
 // AI Funnel Stages matching the project's sales funnel
 type ConversationStageKey =
@@ -104,8 +101,6 @@ export default function ClientSidebar({ client, contact, onUpdateClient }: Clien
 
   // 4. Resolve Lifecycle Stage
   const activeLifecycleKey = client?.client_type || 'new';
-  const activeLifecycle =
-    LIFECYCLE_STAGES.find((s) => s.key === activeLifecycleKey) || LIFECYCLE_STAGES[0];
 
   // 5. Clean tags (exclude stage:* internal tags)
   const productTags = (client?.tags || []).filter((t) => !t.toLowerCase().startsWith('stage:'));

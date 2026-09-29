@@ -4,8 +4,7 @@
 import React, { useState, useEffect } from 'react';
 // 1. Import useSearchParams
 import { useSearchParams } from 'next/navigation';
-import { Box, IconButton, Tooltip, CircularProgress } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
+import { Box, CircularProgress } from '@mui/material';
 import ContactList from "@/components/chat/ContactList";
 import ChatArea from "@/components/chat/ChatArea";
 import { useChannel } from '@/providers/ChannelProvider';

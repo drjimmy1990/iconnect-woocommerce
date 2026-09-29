@@ -7,7 +7,6 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ChatIcon from '@mui/icons-material/Chat';
-import SmartToyIcon from '@mui/icons-material/SmartToy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { DashboardSummary, ChannelPerformance } from '@/hooks/useAnalytics';
 import { formatCurrency } from '@/utils/currency';

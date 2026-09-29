@@ -2,10 +2,9 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, CircularProgress, IconButton, Tooltip, Alert, Snackbar,
-  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText, Button, Divider,
+  Chip, Menu, MenuItem, alpha, Switch, ListItemIcon, ListItemText, Button, Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -33,7 +32,7 @@ import { useMediaUpload, getContentTypeFromMime } from '@/hooks/useMediaUpload';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useChannel } from '@/providers/ChannelProvider';
 
-type ContactWithClient = Contact & {
+type ContactWithClient = Omit<Contact, 'crm_clients' | 'channels'> & {
   crm_clients: {
     id: string;
     client_type: string;
@@ -82,7 +81,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   isSidebarCollapsed = false,
   onToggleSidebar,
 }) => {
-  const router = useRouter();
   const [messageText, setMessageText] = useState('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false, message: '', severity: 'success',
@@ -194,12 +192,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const handleDelete = () => {
     if (contactId && window.confirm("Are you sure you want to delete this contact and all their messages? This action cannot be undone.")) {
       onDeleteContact(contactId);
-    }
-  };
-
-  const handleViewProfile = () => {
-    if (contact && contact.crm_clients?.id) {
-      router.push(`/clients/${contact.crm_clients.id}`);
     }
   };
 
@@ -467,7 +459,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const currentStageKey = contact.crm_clients?.conversation_stage || stageFromTag || 'first_contact';
   const stageCfg = CONVERSATION_STAGE_CONFIG[currentStageKey] || CONVERSATION_STAGE_CONFIG.first_contact;
 
-  const clientPhone = resolveClientPhone(contact.crm_clients as any, contact);
+  const clientPhone = resolveClientPhone(contact.crm_clients, contact);
   const formattedClientPhone = clientPhone ? formatPhoneDisplay(clientPhone) : null;
 
   return (

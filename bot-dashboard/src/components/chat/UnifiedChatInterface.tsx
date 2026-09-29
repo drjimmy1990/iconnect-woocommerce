@@ -2,9 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, IconButton, Tooltip, Button } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import { Box, Paper, Typography, Button } from '@mui/material';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import Link from 'next/link';
 import ContactList from './ContactList';

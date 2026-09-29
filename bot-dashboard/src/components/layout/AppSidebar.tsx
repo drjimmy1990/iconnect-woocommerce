@@ -30,7 +30,6 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
 
 const drawerWidth = 250;
 
@@ -99,7 +98,6 @@ export default function AppSidebar() {
   const { isSidebarOpen, toggleSidebar } = useUI();
   const pathname = usePathname();
   const { permissions } = usePermissions();
-  const router = useRouter();
 
   // Filter menu items based on the user's page permissions
   const visibleItems = menuItems.filter(item => permissions.canAccessPage(item.page));

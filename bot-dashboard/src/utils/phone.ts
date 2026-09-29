@@ -1,5 +1,16 @@
 // src/utils/phone.ts
-import { CrmClient, Contact } from '@/lib/api';
+
+export interface ClientPhoneCandidate {
+  phone?: string | null;
+  secondary_phone?: string | null;
+  source?: string | null;
+  platform_user_id?: string | null;
+}
+
+export interface ContactPhoneCandidate {
+  platform?: string | null;
+  platform_user_id?: string | null;
+}
 
 /**
  * Resolves a client's usable phone number with intelligent fallbacks:
@@ -9,8 +20,8 @@ import { CrmClient, Contact } from '@/lib/api';
  * 4. client.platform_user_id (if source === 'whatsapp' or numeric)
  */
 export function resolveClientPhone(
-  client?: Partial<CrmClient> | null,
-  contact?: Partial<Contact> | null
+  client?: ClientPhoneCandidate | null,
+  contact?: ContactPhoneCandidate | null
 ): string | null {
   if (client?.phone && client.phone.trim().length > 0) {
     return client.phone.trim();
