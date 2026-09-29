@@ -21,76 +21,136 @@ export default function ClientHeader({ client, contact }: ClientHeaderProps) {
 
     return (
         <Box sx={{
-            p: 3,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            p: 2.5,
+            px: 3,
+            borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            bgcolor: 'background.paper'
+            bgcolor: 'rgba(255, 255, 255, 0.88)',
+            backdropFilter: 'blur(16px)',
         }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton onClick={() => router.push('/clients')}>
-                    <ArrowBackIcon />
-                </IconButton>
+                <Tooltip title="Back to Clients">
+                    <IconButton
+                        onClick={() => router.push('/clients')}
+                        sx={{
+                            color: '#64748B',
+                            bgcolor: '#F1F5F9',
+                            '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' },
+                        }}
+                    >
+                        <ArrowBackIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
                 <Avatar
                     src={contact?.avatar_url || undefined}
                     alt={client?.company_name || client?.email || 'Client'}
-                    sx={{ width: 64, height: 64 }}
-                />
+                    sx={{
+                        width: 56,
+                        height: 56,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        border: '2px solid #FFFFFF',
+                        background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                        fontWeight: 700,
+                        fontSize: '1.2rem',
+                    }}
+                >
+                    {(client?.company_name || client?.email || '?').substring(0, 2).toUpperCase()}
+                </Avatar>
                 <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="h5" fontWeight="bold">
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '1.3rem' }}>
                             {client?.company_name || client?.email || 'Client Name'}
                         </Typography>
                         <Chip
-                            label={client?.client_type === 'repeat_customer' ? 'Repeat Customer' : (client?.client_type || 'New').charAt(0).toUpperCase() + (client?.client_type || 'new').slice(1)}
+                            label={client?.client_type === 'repeat_customer' ? '⭐ Repeat VIP' : client?.client_type === 'customer' ? '🛍️ Customer' : client?.client_type === 'interested' ? '👀 Interested' : '🆕 New'}
                             size="small"
-                            color="primary"
-                            variant="outlined"
+                            sx={{
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                                bgcolor: client?.client_type === 'repeat_customer' ? 'rgba(139, 92, 246, 0.12)' : client?.client_type === 'customer' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                                color: client?.client_type === 'repeat_customer' ? '#7C3AED' : client?.client_type === 'customer' ? '#047857' : '#1D4ED8',
+                                border: '1px solid',
+                                borderColor: client?.client_type === 'repeat_customer' ? 'rgba(139, 92, 246, 0.25)' : client?.client_type === 'customer' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(59, 130, 246, 0.25)',
+                            }}
                         />
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: '#64748B', mt: 0.25, fontSize: '0.82rem' }}>
                         Last active: {client?.last_contact_date ? new Date(client.last_contact_date).toLocaleDateString() : 'Never'}
                     </Typography>
                 </Box>
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center' }}>
                 <Button
                     variant="outlined"
-                    startIcon={<EditIcon />}
+                    startIcon={<EditIcon sx={{ fontSize: 16 }} />}
                     onClick={() => setIsEditModalOpen(true)}
+                    size="small"
+                    sx={{
+                        borderRadius: '20px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderColor: '#E2E8F0',
+                        color: '#334155',
+                        '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' },
+                    }}
                 >
-                    Edit
+                    Edit Profile
                 </Button>
                 {client?.phone && (
                     <Button
                         variant="contained"
-                        color="success"
-                        startIcon={<WhatsAppIcon />}
+                        startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
                         onClick={() => window.open(`https://wa.me/${client.phone!.replace(/\D/g, '')}`, '_blank')}
+                        size="small"
+                        sx={{
+                            borderRadius: '20px',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            bgcolor: '#25D366',
+                            color: '#FFFFFF',
+                            boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)',
+                            '&:hover': { bgcolor: '#1EBE5D' },
+                        }}
                     >
                         WhatsApp
                     </Button>
                 )}
                 <Button
-                    variant="outlined"
-                    startIcon={<ChatIcon />}
-                    onClick={() => router.push(`/chat?clientId=${client?.id}`)}
+                    variant="contained"
+                    startIcon={<ChatIcon sx={{ fontSize: 16 }} />}
+                    onClick={() => router.push(`/chat`)}
+                    size="small"
+                    sx={{
+                        borderRadius: '20px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)',
+                        boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+                        '&:hover': { background: 'linear-gradient(135deg, #4338CA 0%, #3730A3 100%)' },
+                    }}
                 >
-                    Chat
+                    Open Chat
                 </Button>
                 {client?.email && (
                     <Tooltip title="Send Email">
-                        <IconButton onClick={() => window.location.href = `mailto:${client.email}`}>
-                            <EmailIcon />
+                        <IconButton
+                            size="small"
+                            onClick={() => window.location.href = `mailto:${client.email}`}
+                            sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0' } }}
+                        >
+                            <EmailIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
                 )}
-                <Tooltip title="Log Call">
-                    <IconButton>
-                        <PhoneIcon />
+                <Tooltip title="Call Customer">
+                    <IconButton
+                        size="small"
+                        sx={{ color: '#64748B', bgcolor: '#F1F5F9', '&:hover': { bgcolor: '#E2E8F0' } }}
+                    >
+                        <PhoneIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
             </Box>

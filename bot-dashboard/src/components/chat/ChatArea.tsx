@@ -5,7 +5,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Paper, CircularProgress, IconButton, Tooltip, Alert, Snackbar,
-  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText,
+  Chip, Menu, MenuItem, alpha, Stack, Switch, ListItemIcon, ListItemText, Button,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ChatIcon from '@mui/icons-material/Chat';
@@ -23,6 +23,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
+import CustomerInsightsDrawer from './CustomerInsightsDrawer';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useMediaUpload, getContentTypeFromMime } from '@/hooks/useMediaUpload';
@@ -102,6 +103,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const queryClient = useQueryClient();
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<null | HTMLElement>(null);
   const [tagMenuAnchor, setTagMenuAnchor] = useState<null | HTMLElement>(null);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
 
   const { data: contact, isLoading: isLoadingContact } = useQuery<ContactWithClient>({
     queryKey: ['contact-details', contactId],
@@ -448,18 +450,40 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 </IconButton>
               </Tooltip>
             )}
-            <PlatformAvatar
-              platform={contact.platform}
+            <Box
+              onClick={() => setIsInsightsOpen(true)}
               sx={{
-                width: 42,
-                height: 42,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                border: '2px solid #FFFFFF',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease',
+                '&:hover': { transform: 'scale(1.05)' },
+                display: 'inline-flex',
               }}
-            />
+            >
+              <PlatformAvatar
+                platform={contact.platform}
+                sx={{
+                  width: 42,
+                  height: 42,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  border: '2px solid #FFFFFF',
+                }}
+              />
+            </Box>
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" component="div" sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#0F172A', lineHeight: 1.2 }}>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  onClick={() => setIsInsightsOpen(true)}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: '1.05rem',
+                    color: '#0F172A',
+                    lineHeight: 1.2,
+                    cursor: 'pointer',
+                    '&:hover': { color: '#4F46E5' },
+                  }}
+                >
                   {contact.name || contact.platform_user_id || 'Unknown Contact'}
                 </Typography>
                 <Chip
@@ -604,29 +628,31 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               />
             </Box>
 
-            {/* CRM Profile Shortcut */}
-            <Tooltip title="Open CRM Profile">
-              <span>
-                <IconButton
-                  onClick={handleViewProfile}
-                  disabled={!contact.crm_clients?.id}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(79, 70, 229, 0.08)',
-                    color: '#4F46E5',
-                    border: '1px solid rgba(79, 70, 229, 0.2)',
-                    '&:hover': {
-                      bgcolor: 'rgba(79, 70, 229, 0.16)',
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'transparent',
-                      borderColor: 'transparent',
-                    },
-                  }}
-                >
-                  <PersonIcon fontSize="small" />
-                </IconButton>
-              </span>
+            {/* Customer Insights Drawer Toggle */}
+            <Tooltip title="Open Customer Insights & Orders">
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setIsInsightsOpen(true)}
+                startIcon={<PersonIcon sx={{ fontSize: 16 }} />}
+                sx={{
+                  borderRadius: '20px',
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  py: 0.35,
+                  px: 1.25,
+                  borderColor: 'rgba(79, 70, 229, 0.3)',
+                  color: '#4F46E5',
+                  bgcolor: 'rgba(79, 70, 229, 0.05)',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 70, 229, 0.12)',
+                    borderColor: '#4F46E5',
+                  },
+                }}
+              >
+                Insights
+              </Button>
             </Tooltip>
 
             {/* Delete Contact */}
@@ -830,6 +856,19 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           onSetValue={setMessageText}
         />
       </Box>
+
+      {/* Customer Insights Slide-Over Drawer */}
+      <CustomerInsightsDrawer
+        contactId={contactId}
+        clientId={contact.crm_clients?.id || null}
+        platform={contact.platform}
+        platformUserId={contact.platform_user_id}
+        contactName={contact.name}
+        aiEnabled={contact.ai_enabled}
+        isFollowupActive={contact.is_followup_active}
+        open={isInsightsOpen}
+        onClose={() => setIsInsightsOpen(false)}
+      />
 
       {/* Error/Success Snackbar */}
       <Snackbar

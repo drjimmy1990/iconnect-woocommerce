@@ -23,6 +23,8 @@ import { DataGrid, GridColDef, GridPaginationModel, GridRowParams, GridRowSelect
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import PersonIcon from '@mui/icons-material/Person';
+import ChatIcon from '@mui/icons-material/Chat';
 import LabelIcon from '@mui/icons-material/Label';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FacebookIcon from '@mui/icons-material/Facebook';
@@ -88,7 +90,7 @@ const typeConfig: Record<string, { label: string; color: string; bg: string }> =
 };
 
 // Define the columns for the DataGrid
-const columns: GridColDef<CrmClient>[] = [
+const getColumns = (router: ReturnType<typeof useRouter>): GridColDef<CrmClient>[] => [
   {
     field: 'company_name',
     headerName: 'Client',
@@ -257,11 +259,60 @@ const columns: GridColDef<CrmClient>[] = [
       );
     },
   },
+  {
+    field: 'actions',
+    headerName: 'Actions',
+    width: 105,
+    sortable: false,
+    renderCell: (params) => {
+      const contactId = params.row.contact_id;
+      const clientId = params.row.id;
+      return (
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ height: '100%' }}>
+          {contactId && (
+            <Tooltip title="Open Live Chat">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push('/chat');
+                }}
+                sx={{
+                  color: '#4F46E5',
+                  bgcolor: 'rgba(79, 70, 229, 0.08)',
+                  '&:hover': { bgcolor: 'rgba(79, 70, 229, 0.2)' },
+                }}
+              >
+                <ChatIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title="View CRM Profile">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/clients/${clientId}`);
+              }}
+              sx={{
+                color: '#64748B',
+                bgcolor: '#F1F5F9',
+                '&:hover': { bgcolor: '#E2E8F0', color: '#0F172A' },
+              }}
+            >
+              <PersonIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      );
+    },
+  },
 ];
 
 export default function ClientsListPage() {
   const router = useRouter();
   const theme = useTheme();
+  const columns = React.useMemo(() => getColumns(router), [router]);
   const [searchTerm, setSearchTerm] = useState('');
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -350,14 +401,68 @@ export default function ClientsListPage() {
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04)',
           overflow: 'hidden',
+          bgcolor: '#FFFFFF',
         }}
       >
+        {/* Quick Filter Chips Bar */}
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            px: 2,
+            py: 1.25,
+            borderBottom: '1px solid #F1F5F9',
+            overflowX: 'auto',
+            bgcolor: '#F8FAFC',
+          }}
+        >
+          {[
+            { label: 'All Clients', key: 'all' },
+            { label: 'New Leads', key: 'new' },
+            { label: 'Interested', key: 'interested' },
+            { label: 'Customers', key: 'customer' },
+            { label: 'VIP Repeat', key: 'repeat_customer' },
+          ].map((item) => {
+            const isSelected =
+              item.key === 'all'
+                ? !filters.type || filters.type.length === 0
+                : filters.type?.includes(item.key);
+            return (
+              <Chip
+                key={item.key}
+                label={item.label}
+                size="small"
+                onClick={() => {
+                  if (item.key === 'all') {
+                    setFilters({});
+                  } else {
+                    setFilters((prev) => ({ ...prev, type: [item.key] }));
+                  }
+                }}
+                sx={{
+                  fontWeight: isSelected ? 700 : 500,
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  bgcolor: isSelected ? '#4F46E5' : '#FFFFFF',
+                  color: isSelected ? '#FFFFFF' : '#475569',
+                  border: isSelected ? '1px solid #4F46E5' : '1px solid #E2E8F0',
+                  boxShadow: isSelected ? '0 2px 6px rgba(79, 70, 229, 0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                  '&:hover': {
+                    bgcolor: isSelected ? '#4338CA' : '#F1F5F9',
+                  },
+                }}
+              />
+            );
+          })}
+        </Stack>
+
         {/* Search Toolbar */}
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, alignItems: 'center', bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+        <Box sx={{ p: 1.75, borderBottom: '1px solid #E2E8F0', display: 'flex', gap: 2, alignItems: 'center', bgcolor: '#FFFFFF' }}>
           <TextField
             fullWidth
             variant="outlined"
