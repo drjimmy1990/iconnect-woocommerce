@@ -7,7 +7,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Avatar,
   Chip,
   Divider,
   Stack,
@@ -33,10 +32,10 @@ import ShoppingBagOutlinedIcon from '@mui/icons-material/ShoppingBagOutlined';
 import MonetizationOnOutlinedIcon from '@mui/icons-material/MonetizationOnOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import AddIcon from '@mui/icons-material/Add';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import NoteAltOutlinedIcon from '@mui/icons-material/NoteAltOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useClient } from '@/hooks/useClient';
@@ -57,6 +56,87 @@ interface CustomerInsightsDrawerProps {
 }
 
 type ClientType = CrmClient['client_type'];
+export type ConversationStageKey =
+  | 'first_contact'
+  | 'browsing'
+  | 'product_viewed'
+  | 'order_placed'
+  | 'purchased'
+  | 'support';
+
+interface FunnelStageConfig {
+  key: ConversationStageKey;
+  label: string;
+  step: number;
+  emoji: string;
+  color: string;
+  bgLight: string;
+  borderLight: string;
+  description: string;
+}
+
+const FUNNEL_STAGES: FunnelStageConfig[] = [
+  {
+    key: 'first_contact',
+    label: 'First Contact',
+    step: 1,
+    emoji: '👋',
+    color: '#3B82F6',
+    bgLight: 'rgba(59, 130, 246, 0.08)',
+    borderLight: 'rgba(59, 130, 246, 0.25)',
+    description: 'Initial greeting & customer discovery',
+  },
+  {
+    key: 'browsing',
+    label: 'Browsing Catalog',
+    step: 2,
+    emoji: '🔍',
+    color: '#8B5CF6',
+    bgLight: 'rgba(139, 92, 246, 0.08)',
+    borderLight: 'rgba(139, 92, 246, 0.25)',
+    description: 'Exploring categories and product options',
+  },
+  {
+    key: 'product_viewed',
+    label: 'Product Viewed',
+    step: 3,
+    emoji: '📦',
+    color: '#F59E0B',
+    bgLight: 'rgba(245, 158, 11, 0.08)',
+    borderLight: 'rgba(245, 158, 11, 0.25)',
+    description: 'Specific product inspected with AI bot',
+  },
+  {
+    key: 'order_placed',
+    label: 'Order Placed',
+    step: 4,
+    emoji: '🛒',
+    color: '#06B6D4',
+    bgLight: 'rgba(6, 182, 212, 0.08)',
+    borderLight: 'rgba(6, 182, 212, 0.25)',
+    description: 'Checkout started or cart pending',
+  },
+  {
+    key: 'purchased',
+    label: 'Purchased / Won',
+    step: 5,
+    emoji: '✅',
+    color: '#10B981',
+    bgLight: 'rgba(16, 185, 129, 0.08)',
+    borderLight: 'rgba(16, 185, 129, 0.25)',
+    description: 'Completed WooCommerce payment',
+  },
+  {
+    key: 'support',
+    label: 'Support & Care',
+    step: 6,
+    emoji: '🎧',
+    color: '#6366F1',
+    bgLight: 'rgba(99, 102, 241, 0.08)',
+    borderLight: 'rgba(99, 102, 241, 0.25)',
+    description: 'Post-purchase assistance or inquiry',
+  },
+];
 
 const LIFECYCLE_STAGES: { key: ClientType; label: string; color: string; emoji: string }[] = [
   { key: 'new', label: 'New Lead', color: '#3B82F6', emoji: '🆕' },
@@ -131,6 +211,18 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
   const notes = clientData?.notes || [];
   const messageCount = clientData?.messageCount || 0;
 
+  // Extract Funnel Stage from client.conversation_stage OR tags (e.g. stage:product_viewed)
+  const stageTag = (client?.tags || []).find((t) => t.toLowerCase().startsWith('stage:'));
+  const stageFromTag = stageTag ? (stageTag.replace(/^stage:/i, '').trim().toLowerCase() as ConversationStageKey) : null;
+  const currentStageKey: ConversationStageKey =
+    (client?.conversation_stage as ConversationStageKey) || stageFromTag || 'first_contact';
+
+  const activeStageConfig =
+    FUNNEL_STAGES.find((s) => s.key === currentStageKey) || FUNNEL_STAGES[0];
+
+  // Separate regular product/interest tags from stage tags
+  const interestTags = (client?.tags || []).filter((tag) => !tag.toLowerCase().startsWith('stage:'));
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setSnackbar({ open: true, message: `${label} copied to clipboard!`, severity: 'success' });
@@ -151,18 +243,48 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
     );
   };
 
+  // Dedicated handler for changing the Funnel Stage
+  const handleConversationStageChange = (newStage: ConversationStageKey) => {
+    if (!clientId) return;
+    const currentTags = client?.tags || [];
+    // Clean out any existing stage:* tags and append the new one
+    const cleanedTags = currentTags.filter((t) => !t.toLowerCase().startsWith('stage:'));
+    const updatedTags = [...cleanedTags, `stage:${newStage}`];
+
+    updateClient(
+      {
+        conversation_stage: newStage,
+        tags: updatedTags,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['contact-details', contactId] });
+          setSnackbar({
+            open: true,
+            message: `Funnel stage set to: ${newStage.replace(/_/g, ' ')}`,
+            severity: 'success',
+          });
+        },
+        onError: () => {
+          setSnackbar({ open: true, message: 'Failed to update funnel stage', severity: 'error' });
+        },
+      }
+    );
+  };
+
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && newTag.trim() && client) {
       e.preventDefault();
       const currentTags = client.tags || [];
-      if (!currentTags.includes(newTag.trim())) {
-        const updatedTags = [...currentTags, newTag.trim()];
+      const cleanInput = newTag.trim();
+      if (!currentTags.includes(cleanInput)) {
+        const updatedTags = [...currentTags, cleanInput];
         updateClient(
           { tags: updatedTags },
           {
             onSuccess: () => {
               setNewTag('');
-              setSnackbar({ open: true, message: 'Tag added', severity: 'success' });
+              setSnackbar({ open: true, message: 'Interest tag added', severity: 'success' });
             },
           }
         );
@@ -380,7 +502,151 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
                 </Stack>
               </Paper>
 
-              {/* Lifecycle Stage Selector */}
+              {/* SEPARATED AI CONVERSATION & FUNNEL STAGE (NEW LUXURY CARD) */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2.25,
+                  borderRadius: '16px',
+                  bgcolor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 2px 10px -2px rgba(15, 23, 42, 0.04)',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <AccountTreeOutlinedIcon sx={{ fontSize: 18, color: '#4F46E5' }} />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#475569',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        fontSize: '0.72rem',
+                      }}
+                    >
+                      AI Sales & Funnel Stage
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={`Step ${activeStageConfig.step} of 5`}
+                    size="small"
+                    sx={{
+                      height: 19,
+                      fontSize: '0.62rem',
+                      fontWeight: 700,
+                      bgcolor: activeStageConfig.bgLight,
+                      color: activeStageConfig.color,
+                      border: `1px solid ${activeStageConfig.borderLight}`,
+                    }}
+                  />
+                </Box>
+
+                {/* Active Stage Highlight Banner */}
+                <Box
+                  sx={{
+                    p: 1.75,
+                    borderRadius: '12px',
+                    bgcolor: activeStageConfig.bgLight,
+                    border: `1px solid ${activeStageConfig.borderLight}`,
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: '10px',
+                        bgcolor: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.25rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                      }}
+                    >
+                      {activeStageConfig.emoji}
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 800,
+                          color: '#0F172A',
+                          fontSize: '0.92rem',
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {activeStageConfig.label}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.72rem' }}>
+                        {activeStageConfig.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Visual Step Progress Bar */}
+                <Box sx={{ mb: 2, px: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const isCompleted = s <= (activeStageConfig.step <= 5 ? activeStageConfig.step : 5);
+                      return (
+                        <Box
+                          key={s}
+                          sx={{
+                            flex: 1,
+                            height: 6,
+                            borderRadius: 3,
+                            bgcolor: isCompleted ? activeStageConfig.color : '#E2E8F0',
+                            transition: 'all 0.3s ease',
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+
+                {/* Stage Switcher Pills */}
+                <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: '0.68rem', fontWeight: 600, display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                  Update Funnel Stage
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {FUNNEL_STAGES.map((stage) => {
+                    const isSelected = stage.key === currentStageKey;
+                    return (
+                      <Chip
+                        key={stage.key}
+                        label={`${stage.emoji} ${stage.label}`}
+                        onClick={() => handleConversationStageChange(stage.key)}
+                        sx={{
+                          fontWeight: isSelected ? 800 : 500,
+                          fontSize: '0.72rem',
+                          height: 28,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          bgcolor: isSelected ? stage.color : '#F8FAFC',
+                          color: isSelected ? '#FFFFFF' : '#475569',
+                          border: '1px solid',
+                          borderColor: isSelected ? stage.color : '#E2E8F0',
+                          boxShadow: isSelected ? `0 2px 8px ${stage.color}40` : 'none',
+                          '&:hover': {
+                            bgcolor: isSelected ? stage.color : '#F1F5F9',
+                            transform: 'translateY(-1px)',
+                          },
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+              </Paper>
+
+              {/* Customer Lifecycle Stage Selector */}
               <Paper
                 elevation={0}
                 sx={{
@@ -544,7 +810,7 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
                 </Paper>
               </Box>
 
-              {/* Tags & Interests */}
+              {/* Tags & Interests (CLEANED - NO STAGE TAGS HERE) */}
               <Paper
                 elevation={0}
                 sx={{
@@ -554,16 +820,21 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
                   border: '1px solid #E2E8F0',
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                  <LocalOfferOutlinedIcon sx={{ fontSize: 18, color: '#64748B' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    Tags & Purchase Interests
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <LocalOfferOutlinedIcon sx={{ fontSize: 18, color: '#64748B' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                      Tags & Purchase Interests ({interestTags.length})
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: '0.7rem' }}>
+                    Product Catalog Interests
                   </Typography>
                 </Box>
 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
-                  {(client?.tags || []).length > 0 ? (
-                    client!.tags!.map((tag) => (
+                  {interestTags.length > 0 ? (
+                    interestTags.map((tag) => (
                       <Chip
                         key={tag}
                         label={tag}
@@ -574,13 +845,14 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
                           color: '#4F46E5',
                           fontWeight: 600,
                           fontSize: '0.75rem',
-                          border: '1px solid rgba(79, 70, 229, 0.15)',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(79, 70, 229, 0.18)',
                         }}
                       />
                     ))
                   ) : (
-                    <Typography variant="caption" sx={{ color: '#94A3B8', fontStyle: 'italic' }}>
-                      No tags assigned yet.
+                    <Typography variant="caption" sx={{ color: '#94A3B8', fontStyle: 'italic', py: 0.5 }}>
+                      No purchase interests tagged yet. Type a category or product below.
                     </Typography>
                   )}
                 </Box>
@@ -588,7 +860,7 @@ const CustomerInsightsDrawer: React.FC<CustomerInsightsDrawerProps> = ({
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder="Type tag and press Enter..."
+                  placeholder="Type product interest tag and press Enter..."
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyDown={handleAddTag}
